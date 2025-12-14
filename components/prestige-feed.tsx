@@ -157,7 +157,10 @@ export function PrestigeFeed() {
         }
       } catch (err) {
         console.error('Error fetching articles:', err)
-        setError(err instanceof Error ? err.message : 'Failed to fetch articles')
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch articles'
+        // Include more debug info in production
+        const debugInfo = `${errorMessage} | URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL ? 'set' : 'MISSING'}`
+        setError(debugInfo)
       } finally {
         setLoading(false)
       }
