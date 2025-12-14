@@ -1,8 +1,10 @@
 "use client"
 
+import Link from "next/link"
 import { DataCardTooltip } from "./data-card-tooltip"
 
 interface ArticleCardProps {
+  id: string
   headline: string
   summary: string
   author: string
@@ -24,6 +26,7 @@ function truncateText(text: string, maxLength: number): string {
 }
 
 export function ArticleCard({
+  id,
   headline,
   summary,
   author,
@@ -53,23 +56,25 @@ export function ArticleCard({
   }
 
   return (
-    <article className="group border-b border-border py-6 md:py-8 lg:py-12 flex flex-col md:flex-row gap-6 hover:bg-card/50 dark:hover:bg-card/20 transition-colors cursor-pointer px-4 md:px-6">
-      {/* Image */}
-      <div className="w-full md:w-1/3 aspect-[4/3] bg-gray-200 dark:bg-gray-800 overflow-hidden relative rounded-sm">
+    <article className="group border-b border-border py-6 md:py-8 lg:py-12 flex flex-col md:flex-row gap-6 hover:bg-card/50 dark:hover:bg-card/20 transition-colors px-4 md:px-6">
+      {/* Image - links to article page */}
+      <Link href={`/article/${id}`} className="w-full md:w-1/3 aspect-[4/3] bg-gray-200 dark:bg-gray-800 overflow-hidden relative rounded-sm block">
         <div
           className="absolute inset-0 bg-cover bg-center grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
           style={{ backgroundImage: `url('${imageUrl}')` }}
           role="img"
           aria-label={`Illustration for ${headline}`}
         />
-      </div>
+      </Link>
 
       {/* Content */}
       <div className="w-full md:w-2/3 flex flex-col justify-between gap-4">
         <div>
-          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-4xl text-foreground mb-3 leading-tight group-hover:text-[#E6FF00] dark:group-hover:text-[#E6FF00] group-hover:bg-[#C2D600] group-hover:text-[#050505] transition-colors text-balance">
-            {headline}
-          </h2>
+          <Link href={`/article/${id}`}>
+            <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-4xl text-foreground mb-3 leading-tight group-hover:text-[#050505] group-hover:bg-[#C2D600] dark:group-hover:text-[#050505] dark:group-hover:bg-[#E6FF00] transition-colors text-balance cursor-pointer">
+              {headline}
+            </h2>
+          </Link>
 
           {/* Badge always shown, summary only if we have real analyst content */}
           <div className="max-w-xl">

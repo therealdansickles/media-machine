@@ -1,8 +1,7 @@
 "use client"
 
-
-
 import React, { useState, useEffect } from "react"
+import Link from "next/link"
 
 import { ArticleCard } from "./article-card"
 
@@ -191,10 +190,8 @@ export function PrestigeFeed() {
 
           {/* Hero Section - Dynamic from latest article */}
           {articles.length > 0 && (
-            <a
-              href={articles[0].originalUrl || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href={`/article/${articles[0].id}`}
               className="relative h-[60vh] lg:h-[80vh] w-full border-b border-border group cursor-pointer overflow-hidden mb-0 block"
             >
               <div
@@ -226,7 +223,7 @@ export function PrestigeFeed() {
                   {articles[0].source} • {articles[0].time}
                 </span>
               </div>
-            </a>
+            </Link>
           )}
 
           {/* Article Feed */}
