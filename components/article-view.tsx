@@ -99,6 +99,19 @@ function decodeHtmlEntities(text: string): string {
   return text.replace(/&[^;]+;/g, match => entities[match] || match)
 }
 
+// Validate URL - must be a proper http/https URL, not empty or test data
+function isValidUrl(url: string | null | undefined): boolean {
+  if (!url || !url.trim()) return false
+  try {
+    const parsed = new URL(url.trim())
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false
+    if (url.includes('/test-') || url.includes('example.com')) return false
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function ArticleView({ article, relatedArticles }: ArticleViewProps) {
   const [copied, setCopied] = useState(false)
 
@@ -242,15 +255,17 @@ export function ArticleView({ article, relatedArticles }: ArticleViewProps) {
           </div>
         )}
 
-        {/* Read Original Button */}
-        <a
-          href={article.original_url || "#"}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block font-mono text-sm font-bold bg-[#C2D600] dark:bg-[#E6FF00] text-black px-6 py-3 hover:bg-[#C2D600]/90 dark:hover:bg-[#E6FF00]/90 transition-all uppercase tracking-wider border-2 border-[#C2D600] dark:border-[#E6FF00] shadow-[0_0_20px_rgba(194,214,0,0.3)] dark:shadow-[0_0_20px_rgba(230,255,0,0.3)] mb-8"
-        >
-          Read Original @ {article.source_name.toUpperCase()}
-        </a>
+        {/* Read Original Button - only shown if URL is valid */}
+        {isValidUrl(article.original_url) && (
+          <a
+            href={article.original_url!}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block font-mono text-sm font-bold bg-[#C2D600] dark:bg-[#E6FF00] text-black px-6 py-3 hover:bg-[#C2D600]/90 dark:hover:bg-[#E6FF00]/90 transition-all uppercase tracking-wider border-2 border-[#C2D600] dark:border-[#E6FF00] shadow-[0_0_20px_rgba(194,214,0,0.3)] dark:shadow-[0_0_20px_rgba(230,255,0,0.3)] mb-8"
+          >
+            Read Original @ {article.source_name.toUpperCase()}
+          </a>
+        )}
 
         {/* Share Buttons */}
         <div className="flex flex-wrap gap-3 mb-12 pt-6 border-t border-border">

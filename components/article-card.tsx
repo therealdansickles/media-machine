@@ -25,6 +25,21 @@ function truncateText(text: string, maxLength: number): string {
   return text.slice(0, maxLength).trim() + "..."
 }
 
+// Validate URL - must be a proper http/https URL, not empty or test data
+function isValidUrl(url: string | undefined): boolean {
+  if (!url || !url.trim()) return false
+  try {
+    const parsed = new URL(url.trim())
+    // Must be http or https
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false
+    // Reject obvious test/placeholder URLs
+    if (url.includes('/test-') || url.includes('example.com')) return false
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function ArticleCard({
   id,
   headline,
@@ -127,16 +142,25 @@ export function ArticleCard({
             SOURCE: {publication} <span className="text-gray-400 dark:text-gray-600">//</span> Reported by {reporterName} <span className="text-gray-400 dark:text-gray-600">//</span> {time}
           </span>
 
-          {/* Prominent READ ORIGINAL button with accent color */}
-          <a
-            href={originalUrl || "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-mono text-xs sm:text-sm font-bold bg-[#C2D600] dark:bg-[#E6FF00] text-black px-3 sm:px-4 py-1.5 sm:py-2 hover:bg-[#C2D600]/90 dark:hover:bg-[#E6FF00]/90 transition-all uppercase tracking-wider border-2 border-[#C2D600] dark:border-[#E6FF00] shadow-[0_0_15px_rgba(194,214,0,0.3)] dark:shadow-[0_0_15px_rgba(230,255,0,0.3)] touch-manipulation inline-block text-center no-underline"
-            aria-label={`Read original article at ${publication}: ${headline}`}
-          >
-            READ ORIGINAL @ {publication.toUpperCase()}
-          </a>
+          {/* Prominent READ ORIGINAL button - only shown if URL is valid */}
+          {isValidUrl(originalUrl) ? (
+            <a
+              href={originalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-xs sm:text-sm font-bold bg-[#C2D600] dark:bg-[#E6FF00] text-black px-3 sm:px-4 py-1.5 sm:py-2 hover:bg-[#C2D600]/90 dark:hover:bg-[#E6FF00]/90 transition-all uppercase tracking-wider border-2 border-[#C2D600] dark:border-[#E6FF00] shadow-[0_0_15px_rgba(194,214,0,0.3)] dark:shadow-[0_0_15px_rgba(230,255,0,0.3)] touch-manipulation inline-block text-center no-underline"
+              aria-label={`Read original article at ${publication}: ${headline}`}
+            >
+              READ ORIGINAL @ {publication.toUpperCase()}
+            </a>
+          ) : (
+            <Link
+              href={`/article/${id}`}
+              className="font-mono text-xs sm:text-sm font-bold border-2 border-border text-foreground px-3 sm:px-4 py-1.5 sm:py-2 hover:bg-foreground hover:text-background transition-all uppercase tracking-wider touch-manipulation inline-block text-center no-underline"
+            >
+              READ MORE
+            </Link>
+          )}
         </div>
       </div>
     </article>
