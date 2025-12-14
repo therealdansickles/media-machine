@@ -73,7 +73,7 @@ export function ArticleCard({
 
           {/* Badge always shown, summary only if we have real analyst content */}
           <div className="max-w-xl">
-            <p className="font-serif text-sm md:text-base lg:text-lg text-foreground/70 dark:text-gray-400 leading-relaxed text-pretty">
+            <p className="font-serif text-sm md:text-base lg:text-lg text-gray-700 dark:text-gray-300 leading-relaxed text-pretty">
               <span className="inline-block bg-[#C2D600] dark:bg-[#E6FF00] text-black font-mono text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider mr-2 align-middle">
                 {getBadge()}
               </span>
@@ -87,7 +87,7 @@ export function ArticleCard({
                   </DataCardTooltip>
                 </>
               ) : (
-                <span className="italic text-foreground/50">Analysis pending...</span>
+                <span className="italic text-gray-500 dark:text-gray-500">Analysis pending...</span>
               )}
             </p>
           </div>
@@ -98,7 +98,7 @@ export function ArticleCard({
               {entityTags.map((tag, i) => (
                 <span
                   key={i}
-                  className="font-mono text-[10px] px-2 py-1 bg-foreground/10 dark:bg-white/10 text-foreground/70 dark:text-white/70 uppercase tracking-wider hover:bg-[#00F0FF]/20 hover:text-[#00F0FF] cursor-pointer transition-colors"
+                  className="font-mono text-[10px] px-2 py-1 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white/70 uppercase tracking-wider hover:bg-[#00F0FF]/20 hover:text-[#00F0FF] cursor-pointer transition-colors"
                 >
                   {tag}
                 </span>
@@ -118,8 +118,8 @@ export function ArticleCard({
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 mt-2">
           {/* Updated author display: SOURCE: [Publication] // Reported by [Name] */}
-          <span className="font-mono text-xs uppercase tracking-widest text-foreground/60 dark:text-gray-600">
-            SOURCE: {publication} <span className="text-foreground/40 dark:text-gray-700">//</span> Reported by {reporterName} <span className="text-foreground/40 dark:text-gray-700">//</span> {time}
+          <span className="font-mono text-xs uppercase tracking-widest text-gray-600 dark:text-gray-400">
+            SOURCE: {publication} <span className="text-gray-400 dark:text-gray-600">//</span> Reported by {reporterName} <span className="text-gray-400 dark:text-gray-600">//</span> {time}
           </span>
 
           {/* Prominent READ ORIGINAL button with accent color */}

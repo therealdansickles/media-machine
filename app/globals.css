@@ -169,9 +169,7 @@
 
   /* <CHANGE> Added serif font for editorial typography */
 
-  --font-serif: "Georgia", "Times New Roman", serif;
-
-  --font-fraunces: var(--font-fraunces);
+  --font-serif: var(--font-fraunces), "Georgia", "Times New Roman", serif;
 
   --color-background: var(--background);
 

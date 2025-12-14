@@ -222,7 +222,7 @@ export function PrestigeFeed() {
                   {articles[0].summary.length > 150 ? articles[0].summary.slice(0, 150) + '...' : articles[0].summary}
                 </p>
 
-                <span className="font-mono text-xs uppercase tracking-widest text-foreground/60 mt-4 block">
+                <span className="font-mono text-xs uppercase tracking-widest text-gray-600 dark:text-gray-400 mt-4 block">
                   {articles[0].source} • {articles[0].time}
                 </span>
               </div>

@@ -80,13 +80,13 @@ export function ShowtimesWidget() {
         <Tabs.List className="flex gap-1 mb-3 border-b border-[#050505] dark:border-border">
           <Tabs.Trigger
             value="films"
-            className="px-2 py-1 text-xs uppercase tracking-wide data-[state=active]:bg-[#C2D600] data-[state=active]:text-black dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-[#E6FF00] data-[state=active]:border-b-2 data-[state=active]:border-[#C2D600] dark:data-[state=active]:border-[#E6FF00] text-foreground/60 hover:text-foreground transition-colors"
+            className="px-2 py-1 text-xs uppercase tracking-wide data-[state=active]:bg-[#C2D600] data-[state=active]:text-black dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-[#E6FF00] data-[state=active]:border-b-2 data-[state=active]:border-[#C2D600] dark:data-[state=active]:border-[#E6FF00] text-gray-500 dark:text-gray-400 hover:text-foreground transition-colors"
           >
             FILMS
           </Tabs.Trigger>
           <Tabs.Trigger
             value="series"
-            className="px-2 py-1 text-xs uppercase tracking-wide data-[state=active]:bg-[#C2D600] data-[state=active]:text-black dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-[#E6FF00] data-[state=active]:border-b-2 data-[state=active]:border-[#C2D600] dark:data-[state=active]:border-[#E6FF00] text-foreground/60 hover:text-foreground transition-colors"
+            className="px-2 py-1 text-xs uppercase tracking-wide data-[state=active]:bg-[#C2D600] data-[state=active]:text-black dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-[#E6FF00] data-[state=active]:border-b-2 data-[state=active]:border-[#C2D600] dark:data-[state=active]:border-[#E6FF00] text-gray-500 dark:text-gray-400 hover:text-foreground transition-colors"
           >
             SERIES
           </Tabs.Trigger>
@@ -105,20 +105,20 @@ export function ShowtimesWidget() {
         
         <Tabs.Content value="series" className="w-full">
           {loading && (
-            <div className="py-8 text-center text-foreground/60 text-xs">
+            <div className="py-8 text-center text-gray-500 dark:text-gray-400 text-xs">
               <div className="inline-block animate-spin border-2 border-[#C2D600] dark:border-[#E6FF00] border-t-transparent rounded-full w-4 h-4 mr-2"></div>
               LOADING PRIMETIME SCHEDULE...
             </div>
           )}
-          
+
           {error && (
             <div className="py-4 text-center text-red-500 text-xs border-l-2 border-red-500 pl-2">
               ERROR: {error}
             </div>
           )}
-          
+
           {!loading && !error && tvShows.length === 0 && (
-            <div className="py-4 text-center text-foreground/60 text-xs">
+            <div className="py-4 text-center text-gray-500 dark:text-gray-400 text-xs">
               NO PRIMETIME SHOWS FOUND
             </div>
           )}
@@ -143,7 +143,7 @@ export function ShowtimesWidget() {
                         <div className="text-foreground font-medium truncate">
                           {showName}
                         </div>
-                        <div className="text-foreground/60 text-[10px]">
+                        <div className="text-gray-500 dark:text-gray-400 text-[10px]">
                           {networkName}
                         </div>
                       </div>

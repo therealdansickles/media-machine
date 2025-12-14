@@ -41,19 +41,19 @@ export function SocialPulse() {
         <Tabs.List className="flex gap-1 mb-3 border-b border-[#050505] dark:border-border">
           <Tabs.Trigger
             value="tiktok"
-            className="px-2 py-1 text-xs uppercase tracking-wide data-[state=active]:bg-[#C2D600] data-[state=active]:text-black dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-[#E6FF00] data-[state=active]:border-b-2 data-[state=active]:border-[#C2D600] dark:data-[state=active]:border-[#E6FF00] text-foreground/60 hover:text-foreground transition-colors"
+            className="px-2 py-1 text-xs uppercase tracking-wide data-[state=active]:bg-[#C2D600] data-[state=active]:text-black dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-[#E6FF00] data-[state=active]:border-b-2 data-[state=active]:border-[#C2D600] dark:data-[state=active]:border-[#E6FF00] text-gray-500 dark:text-gray-400 hover:text-foreground transition-colors"
           >
             TikTok
           </Tabs.Trigger>
           <Tabs.Trigger
             value="insta"
-            className="px-2 py-1 text-xs uppercase tracking-wide data-[state=active]:bg-[#C2D600] data-[state=active]:text-black dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-[#E6FF00] data-[state=active]:border-b-2 data-[state=active]:border-[#C2D600] dark:data-[state=active]:border-[#E6FF00] text-foreground/60 hover:text-foreground transition-colors"
+            className="px-2 py-1 text-xs uppercase tracking-wide data-[state=active]:bg-[#C2D600] data-[state=active]:text-black dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-[#E6FF00] data-[state=active]:border-b-2 data-[state=active]:border-[#C2D600] dark:data-[state=active]:border-[#E6FF00] text-gray-500 dark:text-gray-400 hover:text-foreground transition-colors"
           >
             Insta
           </Tabs.Trigger>
           <Tabs.Trigger
             value="yt"
-            className="px-2 py-1 text-xs uppercase tracking-wide data-[state=active]:bg-[#C2D600] data-[state=active]:text-black dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-[#E6FF00] data-[state=active]:border-b-2 data-[state=active]:border-[#C2D600] dark:data-[state=active]:border-[#E6FF00] text-foreground/60 hover:text-foreground transition-colors"
+            className="px-2 py-1 text-xs uppercase tracking-wide data-[state=active]:bg-[#C2D600] data-[state=active]:text-black dark:data-[state=active]:bg-transparent dark:data-[state=active]:text-[#E6FF00] data-[state=active]:border-b-2 data-[state=active]:border-[#C2D600] dark:data-[state=active]:border-[#E6FF00] text-gray-500 dark:text-gray-400 hover:text-foreground transition-colors"
           >
             YT
           </Tabs.Trigger>
@@ -62,7 +62,7 @@ export function SocialPulse() {
           {TIKTOK_DATA.map((item, idx) => (
             <div key={idx} className="text-xs border-l-2 border-border pl-2 py-1">
               <div className="text-foreground">{item.title}</div>
-              <div className="text-foreground/60">{item.views}</div>
+              <div className="text-gray-500 dark:text-gray-400">{item.views}</div>
             </div>
           ))}
         </Tabs.Content>
@@ -70,7 +70,7 @@ export function SocialPulse() {
           {INSTA_DATA.map((item, idx) => (
             <div key={idx} className="text-xs border-l-2 border-border pl-2 py-1">
               <div className="text-foreground">{item.title}</div>
-              <div className="text-foreground/60">{item.views}</div>
+              <div className="text-gray-500 dark:text-gray-400">{item.views}</div>
             </div>
           ))}
         </Tabs.Content>
@@ -78,7 +78,7 @@ export function SocialPulse() {
           {YT_DATA.map((item, idx) => (
             <div key={idx} className="text-xs border-l-2 border-border pl-2 py-1">
               <div className="text-foreground">{item.title}</div>
-              <div className="text-foreground/60">{item.views}</div>
+              <div className="text-gray-500 dark:text-gray-400">{item.views}</div>
             </div>
           ))}
         </Tabs.Content>
