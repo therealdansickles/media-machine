@@ -16,7 +16,7 @@ import { TickerInterrupter } from "./ticker-interrupter"
 
 import { TrendingCreators } from "./trending-creators"
 
-import { supabase } from "@/lib/supabase"
+import { getSupabase } from "@/lib/supabase"
 
 import type { Article, MappedArticle } from "@/types/article"
 
@@ -139,7 +139,9 @@ export function PrestigeFeed() {
     async function fetchArticles() {
       try {
         setLoading(true)
-        
+
+        const supabase = getSupabase()
+
         // Fetch articles with entity data, filtered by link_status = 'active'
         const { data, error: fetchError } = await supabase
           .from('articles')
@@ -148,19 +150,25 @@ export function PrestigeFeed() {
           .order('created_at', { ascending: false })
 
         if (fetchError) {
-          throw fetchError
+          console.error('Supabase fetch error:', fetchError)
+          throw new Error(fetchError.message || JSON.stringify(fetchError))
         }
 
         if (data) {
           const mappedArticles = data.map((article: Article) => mapArticleToCard(article))
           setArticles(mappedArticles)
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error fetching articles:', err)
-        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch articles'
-        // Include more debug info in production
-        const debugInfo = `${errorMessage} | URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL ? 'set' : 'MISSING'}`
-        setError(debugInfo)
+        let errorMessage = 'Unknown error'
+        if (err instanceof Error) {
+          errorMessage = err.message
+        } else if (typeof err === 'object' && err !== null) {
+          errorMessage = JSON.stringify(err)
+        } else if (typeof err === 'string') {
+          errorMessage = err
+        }
+        setError(errorMessage)
       } finally {
         setLoading(false)
       }
