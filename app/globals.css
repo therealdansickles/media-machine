@@ -2,19 +2,15 @@
 
 @import "tw-animate-css";
 
-
-
 @custom-variant dark (&:is(.dark *));
-
-
 
 :root {
   /* Light Mode - Newsprint Theme */
-  --bg: #EAEAEA;
-  --card: #FFFFFF;
+  --bg: #eaeaea;
+  --card: #ffffff;
   --text: #050505;
-  --border: #E0E0E0;
-  --accent: #C2D600;
+  --border: #e0e0e0;
+  --accent: #c2d600;
 
   --background: oklch(1 0 0);
 
@@ -81,16 +77,13 @@
   --sidebar-border: oklch(0.922 0 0);
 
   --sidebar-ring: oklch(0.708 0 0);
-
 }
-
-
 
 .dark {
   /* Dark Mode - Void Theme */
   --bg: #050505;
   --card: #111111;
-  --text: #EAEAEA;
+  --text: #eaeaea;
   --border: #333333;
 
   --background: oklch(0.145 0 0);
@@ -156,13 +149,9 @@
   --sidebar-border: oklch(0.269 0 0);
 
   --sidebar-ring: oklch(0.439 0 0);
-
 }
 
-
-
 @theme inline {
-
   --font-sans: "Geist", "Geist Fallback";
 
   --font-mono: "Geist Mono", "Geist Mono Fallback";
@@ -242,25 +231,17 @@
   --color-sidebar-border: var(--sidebar-border);
 
   --color-sidebar-ring: var(--sidebar-ring);
-
 }
 
-
-
 @layer base {
-
   * {
-
     @apply border-border outline-ring/50;
-
   }
 
   body {
-
     @apply bg-background text-foreground;
     background-color: var(--bg);
     color: var(--text);
-
   }
 
   .bg-card {
@@ -294,33 +275,20 @@
     background-color: var(--accent);
     color: #050505;
   }
-
 }
-
-
 
 /* <CHANGE> Added marquee animation for ticker */
 
 @keyframes marquee {
-
   0% {
-
     transform: translateX(0);
-
   }
 
   100% {
-
     transform: translateX(-33.333%);
-
   }
-
 }
 
-
-
 .animate-marquee {
-
   animation: marquee 30s linear infinite;
-
 }

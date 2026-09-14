@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Media Machine
 
-## Getting Started
+A source-first media and entertainment publication. Forward one story by email or
+paste a link into the private editor inbox. The app reads the source, prepares a
+concise brief, checks it against the source, and automatically publishes eligible
+results with a link to the original reporting.
 
-First, run the development server:
+The publication includes summaries, key facts, qualified context, source dates
+when available, section filters, full-text search, individual story pages, and RSS.
+The private inbox supports edits, retries, manual publication, and unpublishing.
+There are no fabricated popularity metrics, stock-image heroes, or n8n dependency.
+
+## Run locally
+
+Use Node.js 22.18+ or 24+.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Follow [the connection and cutover guide](docs/SETUP.md) to apply the database
+migration and supply the server settings. Then run `npm run dev` and open
+http://localhost:3000. The editor is at `/editor`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Builds work without service credentials. Live importing, summaries, and email
+forwarding require the corresponding services to be connected. Missing connections
+are reported in the private editor; the public reader shows a retryable error.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Processing
 
-## Learn More
+1. Form submissions and verified email events enter the private `editorial_inbox`.
+2. A database lease claims each job once. URL fetching checks DNS/IP destinations
+   and every redirect, pins the connection, and bounds time and response size.
+3. Readability extracts plain source text. Short/unreadable pages require pasted
+   text; the app does not bypass access controls or paywalls.
+4. OpenAI produces a structured draft. Supporting excerpts must occur in the
+   source, and a second model pass audits the brief for unsupported claims.
+5. With `AUTO_PUBLISH=true`, relevant drafts without warnings publish. Flagged
+   drafts stay private. These checks reduce errors; they do not guarantee accuracy.
+6. Publication copies only the public fields into `published_stories` in one
+   database transaction. Source text and supporting excerpts remain private.
 
-To learn more about Next.js, take a look at the following resources:
+Requests are processed after the response with Next.js `after`. Queued jobs survive
+request failure. Interrupted processing can be recovered after a five-minute lease
+using the editor's recovery button or the authenticated `/api/jobs/process` endpoint.
+Configure an external schedule for unattended recovery. After five interrupted
+attempts, a job requires an explicit retry from the inbox.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Checks
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
 
-## Deploy on Vercel
+Tests cover source extraction, URL restrictions, session/signature validation,
+summary evidence and quality gates, pagination, and real PostgreSQL migration/RLS/
+queue/publication behavior using PGlite. All test stories are fixtures, not news.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The build fetches Fraunces from Google Fonts. In environments using system proxy
+certificates, run the build with `NEXT_TURBOPACK_EXPERIMENTAL_USE_SYSTEM_TLS_CERTS=1`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Cutover notes
+
+The migration is additive. Existing `articles` and n8n data are not deleted, but the
+new reader intentionally reads only `published_stories`. Legacy stories need an
+explicit editorial migration if they should appear in the new publication.
+
+The external n8n workflow is not in this repository and has not been disabled.
+Disable it during cutover once the new forwarding path is verified. See
+[project status](PROJECT_STATUS.md) for current implementation and validation limits.

@@ -1,169 +1,68 @@
-"use client"
-
-import Link from "next/link"
-import { DataCardTooltip } from "./data-card-tooltip"
-
-interface ArticleCardProps {
-  id: string
-  headline: string
-  summary: string
-  author: string
-  time: string
-  imageUrl: string
-  category?: "breaking" | "analysis" | "news"
-  source?: string
-  reporter?: string
-  originalUrl?: string
-  entityTags?: string[]
-  sentiment?: string
-}
-
-const MAX_SUMMARY_LENGTH = 200
-
-function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text
-  return text.slice(0, maxLength).trim() + "..."
-}
-
-// Validate URL - must be a proper http/https URL, not empty or test data
-function isValidUrl(url: string | undefined): boolean {
-  if (!url || !url.trim()) return false
-  try {
-    const parsed = new URL(url.trim())
-    // Must be http or https
-    if (!['http:', 'https:'].includes(parsed.protocol)) return false
-    // Reject obvious test/placeholder URLs
-    if (url.includes('/test-') || url.includes('example.com')) return false
-    return true
-  } catch {
-    return false
-  }
-}
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+import type { Article } from "@/types/article";
+import { formatDate, safeSourceUrl } from "@/lib/display";
 
 export function ArticleCard({
-  id,
-  headline,
-  summary,
-  author,
-  time,
-  imageUrl,
-  category = "news",
-  source,
-  reporter,
-  originalUrl,
-  entityTags = [],
-  sentiment
-}: ArticleCardProps) {
-  // Parse author field if source/reporter not provided
-  // Format: "By [Publication]" -> extract publication
-  const publication = source || (author.startsWith("By ") ? author.replace("By ", "") : author)
-  const reporterName = reporter || "Staff Writer"
-  
-  // Check if we have a real analyst summary (not just the headline repeated)
-  const hasRealSummary = summary && summary.trim() !== headline.trim()
-  const truncatedSummary = hasRealSummary ? truncateText(summary, MAX_SUMMARY_LENGTH) : null
-
-  // Badge varies by category
-  const getBadge = () => {
-    if (category === "breaking") return "BREAKING"
-    if (category === "analysis") return "ANALYSIS"
-    return "INTEL"
-  }
-
+  article,
+  featured = false,
+}: {
+  article: Article;
+  featured?: boolean;
+}) {
+  const sourceUrl = safeSourceUrl(article.original_url);
   return (
-    <article className="group border-b border-border py-6 md:py-8 lg:py-12 flex flex-col md:flex-row gap-6 hover:bg-card/50 dark:hover:bg-card/20 transition-colors px-4 md:px-6">
-      {/* Image - links to article page */}
-      <Link href={`/article/${id}`} className="w-full md:w-1/3 aspect-[4/3] bg-gray-200 dark:bg-gray-800 overflow-hidden relative rounded-sm block">
-        <div
-          className="absolute inset-0 bg-cover bg-center grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
-          style={{ backgroundImage: `url('${imageUrl}')` }}
-          role="img"
-          aria-label={`Illustration for ${headline}`}
-        />
+    <article
+      className={`border-b border-border ${featured ? "py-9 md:py-12" : "py-8"}`}
+    >
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[11px] uppercase tracking-wider mb-4">
+        <span className="bg-[#DCEB46] dark:bg-[#E6FF00] text-black px-2 py-1">
+          {article.section || "Media"}
+        </span>
+        <span>{article.source_name}</span>
+        <span className="text-gray-500">
+          {formatDate(article.source_published_at || article.created_at)}
+        </span>
+      </div>
+      <Link href={`/article/${article.id}`} className="group">
+        <h2
+          className={`font-serif font-bold leading-[1.08] tracking-tight group-hover:underline decoration-[#B3C600] underline-offset-4 mb-5 ${featured ? "text-4xl md:text-6xl max-w-4xl" : "text-3xl md:text-4xl"}`}
+        >
+          {article.headline}
+        </h2>
       </Link>
-
-      {/* Content */}
-      <div className="w-full md:w-2/3 flex flex-col justify-between gap-4">
-        <div>
-          <Link href={`/article/${id}`}>
-            <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-4xl text-foreground mb-3 leading-tight group-hover:text-[#050505] group-hover:bg-[#C2D600] dark:group-hover:text-[#050505] dark:group-hover:bg-[#E6FF00] transition-colors text-balance cursor-pointer">
-              {headline}
-            </h2>
-          </Link>
-
-          {/* Badge always shown, summary only if we have real analyst content */}
-          <div className="max-w-xl">
-            <p className="font-serif text-sm md:text-base lg:text-lg text-gray-700 dark:text-gray-300 leading-relaxed text-pretty">
-              <span className="inline-block bg-[#C2D600] dark:bg-[#E6FF00] text-black font-mono text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider mr-2 align-middle">
-                {getBadge()}
-              </span>
-              {truncatedSummary ? (
-                <>
-                  {truncatedSummary}{" "}
-                  <DataCardTooltip>
-                    <span className="text-[#00F0FF] hover:underline cursor-help decoration-dotted underline-offset-2 inline">
-                      [Context]
-                    </span>
-                  </DataCardTooltip>
-                </>
-              ) : (
-                <span className="italic text-gray-500 dark:text-gray-500">Analysis pending...</span>
-              )}
-            </p>
-          </div>
-
-          {/* Entity Tags */}
-          {entityTags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {entityTags.map((tag, i) => (
-                <span
-                  key={i}
-                  className="font-mono text-[10px] px-2 py-1 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white/70 uppercase tracking-wider hover:bg-[#00F0FF]/20 hover:text-[#00F0FF] cursor-pointer transition-colors"
-                >
-                  {tag}
-                </span>
-              ))}
-              {sentiment && (
-                <span className={`font-mono text-[10px] px-2 py-1 uppercase tracking-wider ${
-                  sentiment === 'bullish' ? 'bg-green-500/20 text-green-400' :
-                  sentiment === 'bearish' ? 'bg-red-500/20 text-red-400' :
-                  'bg-gray-500/20 text-gray-400'
-                }`}>
-                  {sentiment === 'bullish' ? '↑ BULLISH' : sentiment === 'bearish' ? '↓ BEARISH' : '→ NEUTRAL'}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 mt-2">
-          {/* Updated author display: SOURCE: [Publication] // Reported by [Name] */}
-          <span className="font-mono text-xs uppercase tracking-widest text-gray-600 dark:text-gray-400">
-            SOURCE: {publication} <span className="text-gray-400 dark:text-gray-600">//</span> Reported by {reporterName} <span className="text-gray-400 dark:text-gray-600">//</span> {time}
+      <p className="text-base md:text-lg leading-relaxed text-gray-700 dark:text-gray-300 max-w-3xl">
+        {article.analyst_summary}
+      </p>
+      {featured && article.why_it_matters && (
+        <div className="border-l-2 border-[#A3B500] dark:border-[#E6FF00] pl-4 mt-6 max-w-3xl">
+          <span className="font-mono uppercase text-[10px] tracking-widest">
+            Why it matters
           </span>
-
-          {/* Prominent READ ORIGINAL button - only shown if URL is valid */}
-          {isValidUrl(originalUrl) ? (
-            <a
-              href={originalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-xs sm:text-sm font-bold bg-[#C2D600] dark:bg-[#E6FF00] text-black px-3 sm:px-4 py-1.5 sm:py-2 hover:bg-[#C2D600]/90 dark:hover:bg-[#E6FF00]/90 transition-all uppercase tracking-wider border-2 border-[#C2D600] dark:border-[#E6FF00] shadow-[0_0_15px_rgba(194,214,0,0.3)] dark:shadow-[0_0_15px_rgba(230,255,0,0.3)] touch-manipulation inline-block text-center no-underline"
-              aria-label={`Read original article at ${publication}: ${headline}`}
-            >
-              READ ORIGINAL @ {publication.toUpperCase()}
-            </a>
-          ) : (
-            <Link
-              href={`/article/${id}`}
-              className="font-mono text-xs sm:text-sm font-bold border-2 border-border text-foreground px-3 sm:px-4 py-1.5 sm:py-2 hover:bg-foreground hover:text-background transition-all uppercase tracking-wider touch-manipulation inline-block text-center no-underline"
-            >
-              READ MORE
-            </Link>
-          )}
+          <p className="mt-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+            {article.why_it_matters}
+          </p>
         </div>
+      )}
+      <div className="flex flex-wrap items-center gap-5 mt-6 font-mono text-xs">
+        {sourceUrl && (
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex gap-2 items-center font-bold underline underline-offset-4"
+          >
+            Read the full article at {article.source_name}
+            <ArrowUpRight aria-hidden="true" size={14} />
+          </a>
+        )}
+        <Link
+          href={`/article/${article.id}`}
+          className="text-gray-600 dark:text-gray-400 hover:underline"
+        >
+          Key facts & context →
+        </Link>
       </div>
     </article>
-  )
+  );
 }
-
