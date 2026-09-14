@@ -1,41 +1,51 @@
 # Media Machine
 
-An entertainment-industry news reader built with Next.js, React, Tailwind CSS,
-and Supabase. The feed shows active articles with source links, analyst summaries,
-and extracted entities. Each article has a detail page and sharing controls.
+A source-first media and entertainment publication. Forward one story by email or
+paste a link into the private editor inbox. The app reads the source, prepares a
+concise brief, checks it against the source, and automatically publishes eligible
+results with a link to the original reporting.
 
-## Local setup
+The publication includes summaries, key facts, qualified context, source dates
+when available, section filters, full-text search, individual story pages, and RSS.
+The private inbox supports edits, retries, manual publication, and unpublishing.
+There are no fabricated popularity metrics, stock-image heroes, or n8n dependency.
 
-Use Node.js 22.18+ (or Node.js 24+) to run the built-in TypeScript tests.
+## Run locally
+
+Use Node.js 22.18+ or 24+.
 
 ```bash
 npm ci
 cp .env.example .env.local
 ```
 
-Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to your project's
-public connection settings, then run `npm run dev`. Open http://localhost:3000.
-Never put a Supabase service-role key in a `NEXT_PUBLIC_` variable.
+Follow [the connection and cutover guide](docs/SETUP.md) to apply the database
+migration and supply the server settings. Then run `npm run dev` and open
+http://localhost:3000. The editor is at `/editor`.
 
-The app expects the existing `articles` table documented by `types/article.ts`.
-This repository does not yet contain a database bootstrap migration or the n8n
-workflow that populates it. Obtain those from the project owner when setting up a
-new database. Public access must be constrained by Supabase row-level policies;
-the application's `link_status = active` filters are not an access-control boundary.
+Builds work without service credentials. Live importing, summaries, and email
+forwarding require the corresponding services to be connected. Missing connections
+are reported in the private editor; the public reader shows a retryable error.
 
-Without database settings the app can still build. The feed shows a recoverable
-error when it tries to load data, and the server logs identify missing settings.
+## Processing
 
-## Feed behavior
+1. Form submissions and verified email events enter the private `editorial_inbox`.
+2. A database lease claims each job once. URL fetching checks DNS/IP destinations
+   and every redirect, pins the connection, and bounds time and response size.
+3. Readability extracts plain source text. Short/unreadable pages require pasted
+   text; the app does not bypass access controls or paywalls.
+4. OpenAI produces a structured draft. Supporting excerpts must occur in the
+   source, and a second model pass audits the brief for unsupported claims.
+5. With `AUTO_PUBLISH=true`, relevant drafts without warnings publish. Flagged
+   drafts stay private. These checks reduce errors; they do not guarantee accuracy.
+6. Publication copies only the public fields into `published_stories` in one
+   database transaction. Source text and supporting excerpts remain private.
 
-- Fetches 12 active stories at a time, plus one lookahead row to detect another page.
-- Orders by `created_at DESC, id DESC`. Pagination uses both values, preserving
-  timestamp precision and avoiding offsets that shift when new stories arrive.
-- Assumes UUID article IDs and non-null, stable creation timestamps.
-- Failed requests preserve loaded stories and retry from the same cursor.
-- Duplicate clicks are guarded; pending feed requests are cancelled on unmount.
-- The article page and its metadata use the same active-story lookup. Missing or
-  inactive stories show a 404; database failures show a retry screen.
+Requests are processed after the response with Next.js `after`. Queued jobs survive
+request failure. Interrupted processing can be recovered after a five-minute lease
+using the editor's recovery button or the authenticated `/api/jobs/process` endpoint.
+Configure an external schedule for unattended recovery. After five interrupted
+attempts, a job requires an explicit retry from the inbox.
 
 ## Checks
 
@@ -46,14 +56,19 @@ npm run lint
 npm run build
 ```
 
-Unit tests use the real Supabase client with fixture HTTP responses, without live
-database access. Production builds fetch Fraunces from Google Fonts. In a proxy
-environment that requires system certificates, Next.js supports running the build
-with `NEXT_TURBOPACK_EXPERIMENTAL_USE_SYSTEM_TLS_CERTS=1`.
+Tests cover source extraction, URL restrictions, session/signature validation,
+summary evidence and quality gates, pagination, and real PostgreSQL migration/RLS/
+queue/publication behavior using PGlite. All test stories are fixtures, not news.
 
-## Remaining buildout
+The build fetches Fraunces from Google Fonts. In environments using system proxy
+certificates, run the build with `NEXT_TURBOPACK_EXPERIMENTAL_USE_SYSTEM_TLS_CERTS=1`.
 
-See `PROJECT_STATUS.md` for the roadmap and the latest repository review. The social
-pulse, creator rankings, box-office ticker, and context tooltip still contain sample
-data. The submission box is not connected to a backend. The ingestion workflow and
-live database configuration need a separate review before end-to-end validation.
+## Cutover notes
+
+The migration is additive. Existing `articles` and n8n data are not deleted, but the
+new reader intentionally reads only `published_stories`. Legacy stories need an
+explicit editorial migration if they should appear in the new publication.
+
+The external n8n workflow is not in this repository and has not been disabled.
+Disable it during cutover once the new forwarding path is verified. See
+[project status](PROJECT_STATUS.md) for current implementation and validation limits.

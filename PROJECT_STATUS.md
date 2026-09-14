@@ -1,335 +1,57 @@
-# Media Machine - Project Status & Comprehensive Roadmap
-
-**Repository review:** September 14, 2026
-
-## September 2026 review and first build increment
-
-Code reviewed at `a1d995b`. The infrastructure and backend notes below are historical
-project notes, not a verification of current production or n8n health.
-
-Implemented on `codex/feed-pagination-reliability`:
-- Cursor pagination: 12 stories per page, stable timestamp/UUID ordering, and end-of-feed detection.
-- Retry for initial and subsequent fetch failures, preserving loaded stories and cancelling requests on unmount.
-- Truly lazy Supabase initialization; missing settings no longer crash module import/build.
-- Active-only article detail/metadata queries; database failures are distinct from missing stories.
-- Article retry and not-found screens, setup placeholders, reproducible test/typecheck/lint commands.
-- Restored missing lint dependencies and corrected the existing lint failures without changing the visual design.
-
-Already present in the base commit: article detail routes, sharing buttons, per-article
-metadata, and prior fixes for font loading and light-mode contrast. The original
-roadmap below has been marked accordingly where the code confirms completion.
-
-Next priorities:
-1. Replace the hardcoded context tooltip, social/creator widgets, and purported live box-office figures with real data or explicit sample labels.
-2. Add search and category/source/entity filters to the paginated feed.
-3. Export/version the n8n workflow and database migrations, verify public read policies, and inspect ingestion freshness, deduplication, and failure handling.
-4. Connect submissions and newsletter capture; add sitemap/RSS and valid icon assets.
-5. Review current dependency security updates before a production release.
-
-Production Supabase data, row-level policies, and n8n execution were not accessed
-in this review. No database migration or live deployment was performed.
-
----
-
-## Current State: LIVE (MVP)
-
-- **Production URL:** https://media-machine.vercel.app
-- **Custom Domain:** mediamachine.app (DNS pending)
-- **GitHub:** https://github.com/therealdansickles/media-machine
-
----
-
-## Completed
-
-### Infrastructure
-- [x] GitHub repo with auto-deploy to Vercel
-- [x] Supabase connection working (env vars with `.trim()` fix)
-- [x] Next.js 16.0.10 (security patched)
-- [x] Vercel Analytics integrated
-
-### Backend (n8n + Supabase)
-- [x] Spider Agent workflow scraping entertainment news
-- [x] Articles stored with entity extraction via Claude
-- [x] Analyst summaries generated per article
-- [x] link_status filtering ('active' articles only)
-
-### Frontend Components Built
-- [x] `PrestigeFeed` - Main feed with hero section
-- [x] `ArticleCard` - Cards with entity tags, sentiment badges
-- [x] `Header` - Logo + theme toggle
-- [x] `SidebarStack` - Container for widgets
-- [x] `SocialPulse` - Tabbed social trends (hardcoded data)
-- [x] `TrendingCreators` - Creator rankings (hardcoded data)
-- [x] `ShowtimesWidget` - Films iframe + TV schedule API
-- [x] `TickerInterrupter` - Box office marquee (hardcoded)
-- [x] `DataCardTooltip` - Entity/sentiment tooltip (hardcoded)
-- [x] `SubmissionBox` - Tip submission form (not wired up)
-- [x] `ThemeToggle` - Dark/light mode switching
-
----
-
-## In Progress
-
-### DNS Configuration
-Update in Squarespace:
-- **A Record:** `@` → `216.150.1.1`
-- **CNAME:** `www` → `2f11f35aae5695bb.vercel-dns-016.com`
-
----
-
-## Roadmap - Full Task List
-
-### Phase 1: Data Pipeline Completion
-
-#### 1.1 Image Generation (Priority: HIGH)
-- [ ] OpenAI org is verified - enable DALL-E in n8n workflow
-- [ ] Generate images based on article headlines/summaries
-- [ ] Store URLs in `image_url` field (frontend already uses it)
-- [ ] Add fallback logic for failed generations
-
-#### 1.2 Entity System Overhaul (Priority: HIGH)
-- [ ] Create `entities` table in Supabase:
-  ```sql
-  CREATE TABLE entities (
-    id UUID PRIMARY KEY,
-    name TEXT NOT NULL,
-    type TEXT, -- 'person', 'company', 'property', 'deal'
-    context TEXT,
-    article_id UUID REFERENCES articles(id),
-    created_at TIMESTAMP DEFAULT NOW()
-  );
-  ```
-- [ ] Update n8n workflow to insert entities as separate records
-- [ ] Create indexes for fast entity lookups
-- [ ] Update frontend to fetch entities via join or separate query
-
-#### 1.3 Fix DataCardTooltip
-- [ ] Pass real entity data from article to tooltip (currently hardcoded)
-- [ ] Display actual sentiment score from database
-- [ ] Show real topic tags
-
----
-
-### Phase 2: Core Pages & Navigation
-
-#### 2.1 Individual Article Pages (Priority: HIGH)
-- [x] Create `/article/[id]/page.tsx` route
-- [ ] Full article view with:
-  - Hero image (full width)
-  - Headline, analyst summary
-  - Entity tags as clickable filters
-  - Source attribution with link to original
-  - Related articles section
-  - Share buttons (Twitter, LinkedIn, Copy link)
-
-#### 2.2 Pagination (Priority: HIGH)
-- [x] Implement "Load More Stories" functionality
-- [x] Use cursor-based pagination (timestamp plus UUID)
-- [x] Add loading state while fetching
-
-#### 2.3 Header Navigation (Priority: MEDIUM)
-- [ ] Add navigation links:
-  - Categories (Film, TV, Streaming, Business)
-  - Search icon → search modal
-  - About link
-- [ ] Mobile hamburger menu
-- [ ] Sticky behavior on scroll
-
-#### 2.4 Footer (Priority: MEDIUM)
-- [ ] Create footer component with:
-  - About Media Machine
-  - Newsletter signup
-  - Social links
-  - Legal (Privacy, Terms)
-  - Copyright
-
-#### 2.5 About Page (Priority: LOW)
-- [ ] Create `/about/page.tsx`
-- [ ] Mission statement, team info
-- [ ] Contact information
-
----
-
-### Phase 3: Search & Filtering
-
-#### 3.1 Search Functionality (Priority: HIGH)
-- [ ] Full-text search on headlines + summaries
-- [ ] Search modal or dedicated search page
-- [ ] Debounced input with instant results
-- [ ] Highlight matches in results
-
-#### 3.2 Category Filtering (Priority: MEDIUM)
-- [ ] Filter by category: breaking, analysis, news
-- [ ] URL-based filters (`/?category=breaking`)
-- [ ] Category pages (`/category/[slug]`)
-
-#### 3.3 Source Filtering (Priority: MEDIUM)
-- [ ] Filter by source (Variety, Deadline, THR, etc.)
-- [ ] Source pages (`/source/[name]`)
-
-#### 3.4 Entity-Based Filtering (Priority: MEDIUM)
-- [ ] Click entity tag → filter all articles mentioning that entity
-- [ ] Entity pages (`/entity/[name]`)
-- [ ] Show entity profile (all mentions, sentiment over time)
-
----
-
-### Phase 4: UI/UX Polish
-
-#### 4.1 Light Mode Fixes (Priority: HIGH)
-- [ ] Fix contrast issues - text too light on light backgrounds
-- [ ] Audit all components for proper light/dark variants
-- [ ] Test with accessibility tools (contrast ratios)
-
-#### 4.2 Typography - Fraunces Font (Priority: HIGH)
-- [ ] Fix font not loading - currently falls back to Georgia
-- [ ] Ensure `--font-fraunces` CSS variable is applied correctly
-- [ ] Check font weights (400, 700, 900) are loaded
-
-#### 4.3 Favicon & Icons (Priority: MEDIUM)
-- [ ] Create/verify these files exist in `/public`:
-  - `icon-light-32x32.png`
-  - `icon-dark-32x32.png`
-  - `icon.svg`
-  - `apple-icon.png`
-- [ ] Add OG image for social sharing
-
-#### 4.4 Loading States (Priority: MEDIUM)
-- [ ] Skeleton loaders for article cards
-- [ ] Skeleton for hero section
-- [ ] Smooth transitions between states
-
-#### 4.5 Mobile Polish (Priority: MEDIUM)
-- [ ] Review all breakpoints
-- [ ] Touch-friendly tap targets
-- [ ] Swipe gestures for navigation
-
----
-
-### Phase 5: Live Data for Widgets
-
-#### 5.1 Social Pulse - Real Data (Priority: MEDIUM)
-- [ ] Integrate TikTok/Instagram/YouTube APIs OR
-- [ ] Scrape trending entertainment content
-- [ ] Store in Supabase, update periodically via n8n
-
-#### 5.2 Trending Creators - Real Data (Priority: LOW)
-- [ ] Pull from social APIs or curate manually
-- [ ] Link to creator profiles
-
-#### 5.3 Box Office Ticker - Real Data (Priority: MEDIUM)
-- [ ] Integrate Box Office Mojo API or scrape data
-- [ ] Update ticker with real weekend numbers
-- [ ] Add weekly comparisons
-
----
-
-### Phase 6: Engagement Features
-
-#### 6.1 Submission Box - Wire Up (Priority: LOW)
-- [ ] Create Supabase `submissions` table
-- [ ] API route to handle form submission
-- [ ] Email notification for new tips
-- [ ] Spam protection (rate limiting, captcha)
-
-#### 6.2 Newsletter Signup (Priority: MEDIUM)
-- [ ] Email capture form
-- [ ] Integrate with email service (Resend, Mailchimp)
-- [ ] Welcome email flow
-
-#### 6.3 Share Functionality (Priority: MEDIUM)
-- [x] Share buttons on articles
-- [ ] Copy link with toast notification
-- [ ] Native share on mobile
-
----
-
-### Phase 7: Performance & SEO
-
-#### 7.1 Image Optimization (Priority: HIGH)
-- [ ] Replace `<div style={{backgroundImage}}>` with `<Image>` component
-- [ ] Use Next.js image optimization
-- [ ] Add blur placeholders
-- [ ] Lazy loading for below-fold images
-
-#### 7.2 SEO (Priority: HIGH)
-- [x] Dynamic meta tags per article page
-- [x] Open Graph tags for social sharing
-- [x] Twitter card meta tags
-- [ ] Structured data (JSON-LD) for articles
-
-#### 7.3 Sitemap & RSS (Priority: MEDIUM)
-- [ ] Generate sitemap.xml automatically
-- [ ] RSS feed for articles (`/feed.xml`)
-
-#### 7.4 Error Handling (Priority: MEDIUM)
-- [ ] Error boundary components
-- [ ] Custom 404 page
-- [ ] Custom 500 page
-- [ ] Graceful degradation when Supabase is down
-
----
-
-### Phase 8: Future Features (Post-Launch)
-
-#### 8.1 Real-Time Updates
-- [ ] Supabase Realtime subscriptions
-- [ ] New article toast notifications
-- [ ] Live updating without refresh
-
-#### 8.2 User Accounts
-- [ ] Supabase Auth integration
-- [ ] User profiles
-- [ ] Saved/bookmarked articles
-- [ ] Reading history
-
-#### 8.3 Personalization
-- [ ] Follow entities/topics
-- [ ] Personalized feed algorithm
-- [ ] Email digest preferences
-
-#### 8.4 Analytics Dashboard
-- [ ] Track popular articles
-- [ ] Entity mention trends
-- [ ] Sentiment analysis over time
-
----
-
-## Key Files Reference
-
-| File | Purpose |
-|------|---------|
-| `lib/supabase.ts` | Supabase client init |
-| `components/prestige-feed.tsx` | Main feed, data fetching |
-| `components/article-card.tsx` | Article card display |
-| `components/header.tsx` | Site header |
-| `components/sidebar-stack.tsx` | Sidebar container |
-| `components/social-pulse.tsx` | Social trends widget |
-| `components/trending-creators.tsx` | Creator rankings |
-| `components/showtimes-widget.tsx` | Films/TV schedule |
-| `components/ticker-interrupter.tsx` | Box office marquee |
-| `components/data-card-tooltip.tsx` | Entity tooltip |
-| `app/globals.css` | Theme variables, animations |
-| `types/article.ts` | TypeScript interfaces |
-
----
-
-## Environment Variables
-
-Required in Vercel:
-```
-NEXT_PUBLIC_SUPABASE_URL=https://mrmoxwfjgcaimbqrqqoz.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=[your-anon-key]
-```
-
-**Important:** No trailing whitespace in env var values.
-
----
-
-## Resume Checklist
-
-When resuming development:
-1. `cd ~/media-machine`
-2. `npm run dev`
-3. Check DNS status for mediamachine.app
-4. Pick a task from Phase 1-4 based on priority
+# Media Machine status
+
+Updated September 14, 2026.
+
+## Product direction
+
+Forward stories into a private editorial inbox. Publish concise, source-grounded
+media and entertainment briefs automatically when quality checks pass. Keep source
+links prominent and hold unreadable or flagged items for correction.
+
+## Implemented
+
+- Native form and signed inbound-email intake; no n8n dependency in the new path.
+- Private inbox, public briefs, additive migration, public read policies, and
+  service-only claim/publish/unpublish functions.
+- Durable queue, job leases, duplicate handling, recovery endpoint and manual retry.
+- Bounded source extraction, public-network-only destinations, and pasted-text fallback.
+- Structured summaries, source-excerpt checks, separate model audit, and automatic
+  publication with relevance/warning gates.
+- Signed editor sessions, same-origin mutation checks, editing and publication controls.
+- Rebuilt reader with summaries, key facts, why-it-matters context, actual attribution,
+  source dates, section filters, full-text search, pagination, article pages and sharing.
+- RSS, sitemap, robots rules, About page, and a real icon asset.
+- Removed sample social/creator/box-office widgets, fake context tooltips, dead submission
+  UI, showtimes embed, and unrelated stock-image heroes.
+
+## Connection work still required
+
+- Apply the migration to the chosen Supabase environment.
+- Set service credentials and a random editor key on the host.
+- Configure the forwarding address, allowed senders, and signed receiving webhook.
+- Configure periodic queue recovery and the public site origin.
+- Evaluate real forwarded stories and their generated briefs.
+- Disable the external n8n workflow during cutover; it was not accessible here.
+
+## Boundaries
+
+Legacy database content is preserved but is not automatically republished. The source
+URL is normalized for tracking parameters; distinct URLs reporting the same event are
+not yet clustered. Article and email bodies are not republished. Ambiguous emails and
+unreadable pages require source selection/text. Automated audits reduce error risk
+but cannot establish that every generated claim is correct.
+
+The current editor is for one owner. Multi-user roles, correction history, event
+clustering, additional-source corroboration, and newsletter distribution are future
+work. RSS returns the latest 100 stories; the initial sitemap covers 1,000 stories.
+
+See `docs/SETUP.md` for the connection, acceptance, and cutover procedure.
+
+## Validation completed
+
+Seventeen automated tests, TypeScript, ESLint, and the production build pass on
+Next.js 16.3.5. The production dependency audit reports no known vulnerabilities.
+A Chromium run using a local PostgreSQL-backed API adapter and simulated AI responses
+passed the submission-to-publication flow, editing/unpublishing, access controls,
+search/filtering/pagination, RSS, and mobile light/dark checks. See
+`docs/VALIDATION.md` for scope and live-service limitations.

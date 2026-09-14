@@ -1,97 +1,41 @@
-import type React from "react"
+import type React from "react";
 
+import type { Metadata } from "next";
 
+import { Fraunces } from "next/font/google";
 
-import type { Metadata } from "next"
+import { Analytics } from "@vercel/analytics/next";
 
-import { Fraunces } from "next/font/google"
+import { ThemeProvider } from "@/components/theme-provider";
 
-import { Analytics } from "@vercel/analytics/next"
-
-import { ThemeProvider } from "@/components/theme-provider"
-
-import "./globals.css"
+import "./globals.css";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
   variable: "--font-fraunces",
   weight: ["400", "700", "900"],
-})
+});
 
 export const metadata: Metadata = {
-
-  // <CHANGE> Updated metadata for prestige feed app
-
-  title: "MEDIA / MACHINE - Entertainment Industry News",
-
-  description: "Premium editorial feed covering streaming wars, box office, and Hollywood business news",
-
-  generator: "v0.app",
-
-  icons: {
-
-    icon: [
-
-      {
-
-        url: "/icon-light-32x32.png",
-
-        media: "(prefers-color-scheme: light)",
-
-      },
-
-      {
-
-        url: "/icon-dark-32x32.png",
-
-        media: "(prefers-color-scheme: dark)",
-
-      },
-
-      {
-
-        url: "/icon.svg",
-
-        type: "image/svg+xml",
-
-      },
-
-    ],
-
-    apple: "/apple-icon.png",
-
-  },
-
-}
+  title: "MEDIA / MACHINE | The media brief",
+  description:
+    "Essential media and entertainment news: concise summaries, key facts, context, and links to the original reporting.",
+};
 
 export default function RootLayout({
-
   children,
-
 }: Readonly<{
-
-  children: React.ReactNode
-
+  children: React.ReactNode;
 }>) {
-
   return (
-
     <html lang="en" suppressHydrationWarning>
-
       <body className={`${fraunces.variable} font-sans antialiased`}>
-
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-
           {children}
-
         </ThemeProvider>
 
         <Analytics />
-
       </body>
-
     </html>
-
-  )
-
+  );
 }
