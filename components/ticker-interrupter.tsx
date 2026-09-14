@@ -46,7 +46,7 @@ export function TickerInterrupter() {
 
               <span className="text-black/50" aria-hidden="true">
 
-                ///
+                {"///"}
 
               </span>
 

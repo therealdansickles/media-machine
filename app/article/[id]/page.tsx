@@ -1,17 +1,23 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { createClient } from "@supabase/supabase-js"
+import { cache } from "react"
+import { getSupabase } from "@/lib/supabase"
 import { ArticleView } from "@/components/article-view"
 
-// Sanitize env vars
-function sanitizeEnvVar(value: string | undefined): string {
-  if (!value) return ''
-  return value.replace(/\s+/g, '').replace(/[^\x20-\x7E]/g, '')
-}
+// Share the article lookup between metadata and the page for this render.
+const getArticle = cache(async (id: string) => {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null
+  const { data, error } = await getSupabase()
+    .from('articles')
+    .select('*')
+    .eq('id', id)
+    .eq('link_status', 'active')
+    .maybeSingle()
 
-const supabaseUrl = sanitizeEnvVar(process.env.NEXT_PUBLIC_SUPABASE_URL)
-const supabaseAnonKey = sanitizeEnvVar(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+  // An outage is recoverable; only an absent/inactive article is a 404.
+  if (error) throw new Error('Unable to load this story')
+  return data
+})
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -21,11 +27,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params
 
-  const { data: article } = await supabase
-    .from('articles')
-    .select('headline, analyst_summary, source_name, image_url')
-    .eq('id', id)
-    .single()
+  const article = await getArticle(id)
 
   if (!article) {
     return {
@@ -54,19 +56,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ArticlePage({ params }: PageProps) {
   const { id } = await params
 
-  // Fetch the article
-  const { data: article, error } = await supabase
-    .from('articles')
-    .select('*, entities_json, sentiment, market_impact')
-    .eq('id', id)
-    .single()
-
-  if (error || !article) {
-    notFound()
-  }
+  const article = await getArticle(id)
+  if (!article) notFound()
 
   // Fetch related articles (same source or recent)
-  const { data: relatedArticles } = await supabase
+  const { data: relatedArticles } = await getSupabase()
     .from('articles')
     .select('id, headline, image_url, source_name, created_at')
     .eq('link_status', 'active')

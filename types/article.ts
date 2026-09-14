@@ -2,13 +2,16 @@
 export interface Article {
   id: string
   headline: string
-  analyst_summary: string
+  analyst_summary: string | null
   source_name: string
   reporter_name?: string | null
   created_at: string
   category?: "breaking" | "analysis" | "news" | null
-  image_url: string
+  image_url: string | null
   link_status: string
+  entities_json?: string | null
+  sentiment?: string | null
+  market_impact?: number | null
   original_url?: string | null
   // Joined from intelligence table
   intelligence?: {
@@ -33,7 +36,6 @@ export interface MappedArticle {
   entityTags?: string[]
   sentiment?: string
 }
-
 
 
 

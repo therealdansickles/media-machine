@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Media Machine
 
-## Getting Started
+An entertainment-industry news reader built with Next.js, React, Tailwind CSS,
+and Supabase. The feed shows active articles with source links, analyst summaries,
+and extracted entities. Each article has a detail page and sharing controls.
 
-First, run the development server:
+## Local setup
+
+Use Node.js 22.18+ (or Node.js 24+) to run the built-in TypeScript tests.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to your project's
+public connection settings, then run `npm run dev`. Open http://localhost:3000.
+Never put a Supabase service-role key in a `NEXT_PUBLIC_` variable.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The app expects the existing `articles` table documented by `types/article.ts`.
+This repository does not yet contain a database bootstrap migration or the n8n
+workflow that populates it. Obtain those from the project owner when setting up a
+new database. Public access must be constrained by Supabase row-level policies;
+the application's `link_status = active` filters are not an access-control boundary.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Without database settings the app can still build. The feed shows a recoverable
+error when it tries to load data, and the server logs identify missing settings.
 
-## Learn More
+## Feed behavior
 
-To learn more about Next.js, take a look at the following resources:
+- Fetches 12 active stories at a time, plus one lookahead row to detect another page.
+- Orders by `created_at DESC, id DESC`. Pagination uses both values, preserving
+  timestamp precision and avoiding offsets that shift when new stories arrive.
+- Assumes UUID article IDs and non-null, stable creation timestamps.
+- Failed requests preserve loaded stories and retry from the same cursor.
+- Duplicate clicks are guarded; pending feed requests are cancelled on unmount.
+- The article page and its metadata use the same active-story lookup. Missing or
+  inactive stories show a 404; database failures show a retry screen.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Checks
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
 
-## Deploy on Vercel
+Unit tests use the real Supabase client with fixture HTTP responses, without live
+database access. Production builds fetch Fraunces from Google Fonts. In a proxy
+environment that requires system certificates, Next.js supports running the build
+with `NEXT_TURBOPACK_EXPERIMENTAL_USE_SYSTEM_TLS_CERTS=1`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Remaining buildout
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `PROJECT_STATUS.md` for the roadmap and the latest repository review. The social
+pulse, creator rankings, box-office ticker, and context tooltip still contain sample
+data. The submission box is not connected to a backend. The ingestion workflow and
+live database configuration need a separate review before end-to-end validation.

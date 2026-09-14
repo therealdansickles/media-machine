@@ -139,7 +139,7 @@ export function ArticleCard({
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 mt-2">
           {/* Updated author display: SOURCE: [Publication] // Reported by [Name] */}
           <span className="font-mono text-xs uppercase tracking-widest text-gray-600 dark:text-gray-400">
-            SOURCE: {publication} <span className="text-gray-400 dark:text-gray-600">//</span> Reported by {reporterName} <span className="text-gray-400 dark:text-gray-600">//</span> {time}
+            SOURCE: {publication} <span className="text-gray-400 dark:text-gray-600">{"//"}</span> Reported by {reporterName} <span className="text-gray-400 dark:text-gray-600">{"//"}</span> {time}
           </span>
 
           {/* Prominent READ ORIGINAL button - only shown if URL is valid */}
