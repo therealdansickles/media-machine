@@ -6,7 +6,7 @@
 
 1. Sign in and choose a permanent edition address, a byline and a beat. New editions start in draft.
 2. Open **Sources**. Add a public RSS or Atom URL or a public Substack publication address. The default imports headlines and links into the inbox. Enable automatic link publication for sources you want to syndicate as a link list. Only select the licensed setting if you may process the publisher’s feed descriptions.
-3. Add an individual article from **Add a shared story**. Use the publisher’s public permalink, including for subscriber-only reporting. Write your own headline and explain what your reader should take away. Draft with OpenAI is optional. It sends the source label, headline and the material you supply to OpenAI using the API key entered for that request. Review the result before publishing.
+3. Add an individual article from **Add a shared story**. Use the publisher’s public permalink, including for subscriber-only reporting. Write your own headline and explain what your reader should take away. Draft with OpenAI is optional. It sends the source label, headline and the material you supply to OpenAI using the API key entered for that request. Review the result before publishing. For ongoing coverage, opt in under **Automatic briefs** and choose a daily attempt limit. New licensed RSS descriptions with enough evidence go into a private drafting queue. Disable automatic link publication for those sources.
 4. Publish a story and change **Publication settings** from draft to public. The web edition and its RSS output show up to 100 published entries. For members-only editions the public page shows the subscription offer and the RSS endpoint closes. Readers sign in with their membership email.
 5. To withdraw a story, return it to draft or archive it. Existing third-party RSS readers may keep previously public items. Remove a source to stop future imports. Imported stories stay under editorial control.
 
@@ -18,7 +18,7 @@
 
 **Stripe subscriptions.** Create a recurring Stripe Payment Link in your own Stripe account and set it as the edition’s checkout URL. In the studio connect its `plink_` ID and a restricted key with **read-only Checkout Sessions and Subscriptions** access. Configure the Payment Link’s post-payment redirect to the exact claim URL shown in the studio, including the literal `{CHECKOUT_SESSION_ID}` placeholder. Test with a test-mode link and matching restricted key before enabling live payments. Readers complete checkout and sign in with the email they used to pay. The server verifies the paid session, payment link, email and active subscription and verifies subscription status again on subsequent reads. Trials and one-time payments use manual grants. A reader who misses the return redirect can contact the curator for a manual grant. Discounts, refunds, dispute handling and tax settings are managed in the curator’s Stripe account. A curator can revoke access independently.
 
-Stripe credentials are encrypted using AES-GCM with the edition ID as authenticated data. Keep the deployment key stable and backed up in your secret manager. Changing it requires reconnecting Stripe for each edition. OpenAI keys are used in memory for one draft and never written into the edition database.
+Stripe credentials are encrypted using AES-GCM with the edition ID as authenticated data. Keep the deployment key stable and backed up in your secret manager. Changing it requires reconnecting Stripe for each edition. One-off OpenAI keys are used in memory for a single draft. Enabling automatic briefs stores an encrypted, edition-scoped key; disconnecting deletes it and clears pending automatic requests.
 
 ## Sources and rights
 
@@ -53,6 +53,6 @@ npm run build
 npx wrangler deploy
 ```
 
-Provide a base64-encoded, randomly generated 32-byte secret to the secret command. The Worker has a cron handler that checks up to five due feeds per invocation, oldest first. Each source has an hourly minimum interval and each request imports up to 20 entries. RSS fetches are bounded, deduplicated, and use ETags or Last-Modified when provided. The hosted service also accepts an empty POST to `/jobs/refresh` to trigger the same bounded sweep. It takes no target URL or credentials from the caller.
+Provide a base64-encoded, randomly generated 32-byte secret to the secret command. The Worker has a cron handler that checks up to five due feeds per invocation, oldest first. Each sweep also processes one eligible automatic draft within its edition’s daily limit. Each source has an hourly minimum interval and each request imports up to 20 entries. RSS fetches are bounded, deduplicated, and use ETags or Last-Modified when provided. The hosted service also accepts an empty POST to `/jobs/refresh` to trigger the same bounded sweep. It takes no target URL or credentials from the caller.
 
 The launch edition combines authored briefs with new linked headlines from the Sundance Institute’s public RSS feed. Other creators can follow any supported public feed. The default limits are 15 editions per creator, 20 sources per edition and 3,000 stored stories per edition.

@@ -225,7 +225,37 @@ function storyEditor(feed, story) {
   )}</details>`;
   return `<article class="story-editor"><details><summary><span class="story-heading"><span class="state-label">${h(state === "live" ? "Published" : state === "archived" ? "Archived" : "Draft")} <span class="state-source">/ ${h(story.source)}</span></span><span class="story-title">${h(story.title)}</span></span></summary>
     <p class="source-credit">Original from ${h(story.source)}<br>${link ? `<a href="${link}" target="_blank" rel="noopener noreferrer">${h(original)}</a>` : h(original)}</p>
-    ${editing}${drafting}</details></article>`;
+    ${story.automation ? `<p class="source-credit">${h({ queued: "Queued for drafting", working: "Draft requested", ready: "AI draft ready for editorial review", failed: "Automatic drafting could not finish. Use the editor or draft manually." }[story.automation] || "")}</p>` : ""}${editing}${drafting}</details></article>`;
+}
+
+function draftingPanel(feed) {
+  const path = pathFor(feed.slug) + "/drafting";
+  return panel(
+    "Automatic briefs",
+    `<p>Prepare a headline and summary for each new permitted feed item with at least 25 words of source material. Leave automatic link publication off for those sources. Each brief stays in your inbox for review.</p>
+    <p>${feed.draft_limit ? "Enabled. Daily drafting limit: " + h(feed.draft_limit) : "Off."} OpenAI bills your account for each attempt. The studio encrypts the key you connect here.</p>
+    ${form(
+      path,
+      field(
+        "OpenAI API key",
+        "key",
+        "",
+        'type="password" required autocomplete="off"',
+      ) +
+        field(
+          "Maximum attempts per UTC day",
+          "limit",
+          feed.draft_limit || 3,
+          'type="number" min="1" max="25" required',
+        ) +
+        act(
+          feed.draft_limit
+            ? "Update automatic briefs"
+            : "Enable automatic briefs",
+        ),
+    )}
+    ${feed.draft_limit ? form(path, hidden("limit", "0") + act("Disconnect automatic briefs")) : ""}`,
+  );
 }
 
 export function studioPage(
@@ -256,7 +286,7 @@ export function studioPage(
     ${sharedLink(selected)}
     ${stories.length ? stories.map((story) => storyEditor(selected, story)).join("") : `<p class="empty-state">Your inbox is empty. Add a feed in Sources or save a shared story to start your first brief.</p>`}
     ${pageOffset > 0 || hasMore ? `<nav class="actions pagination" aria-label="Inbox pages">${pageOffset > 0 ? `<a class="secondary" href="${path}&amp;offset=${Math.max(0, pageOffset - 25)}">Previous briefs</a>` : ""}${hasMore ? `<a class="secondary" href="${path}&amp;offset=${pageOffset + 25}">Next briefs</a>` : ""}</nav>` : ""}
-    </section><aside class="studio-rail"><h2>Edition desk</h2>${sourcesPanel(selected, sources)}${settings(selected)}${membersPanel(selected, members)}${billingPanel(selected, origin)}${panel("Create another edition", newEdition())}</aside></div>
+    </section><aside class="studio-rail"><h2>Edition desk</h2>${sourcesPanel(selected, sources)}${draftingPanel(selected)}${settings(selected)}${membersPanel(selected, members)}${billingPanel(selected, origin)}${panel("Create another edition", newEdition())}</aside></div>
   </div>`,
     { studio: true },
   );

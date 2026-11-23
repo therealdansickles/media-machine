@@ -204,3 +204,5 @@ dialog::backdrop { background: rgb(20 24 17 / .6); }
   .studio { padding-top: 1.4rem; }
   .studio-rail { border-top: 3px double var(--ink); padding-top: 1.2rem; }
 }
+
+.desk-section { margin: 2.25rem 0 1rem; font: 650 1rem var(--mono); text-transform: uppercase; letter-spacing: .07em; }

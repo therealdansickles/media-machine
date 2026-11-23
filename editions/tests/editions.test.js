@@ -260,3 +260,76 @@ test("starter edition is seeded once and publishes new link-only items from its 
     /Colour study opens/,
   );
 });
+test("automatic drafting requires opt-in, keeps results private and honors the daily budget", async () => {
+  const { env, req, post, create } = setup();
+  await create();
+  const evidence =
+    "The exhibition pairs works by two local artists and opens to residents on Friday. The program includes an afternoon conversation on materials and techniques used in the studio.";
+  const entry = (i) =>
+    "<item><title>Studio exhibition " +
+    i +
+    "</title><link>https://art.example.org/events/" +
+    i +
+    "</link><description>" +
+    evidence +
+    "</description></item>";
+  const feed = "<rss><channel>" + entry(1) + entry(2) + "</channel></rss>";
+  await post("drafting", { key: "sk-fictional-test-credential", limit: 1 });
+  await post(
+    "source",
+    { label: "Licensed source", url: source, mode: "licensed" },
+    async () => new Response(feed),
+  );
+  const count = (state) =>
+    env.DB.sqlite
+      .prepare(
+        "SELECT COUNT(*) n FROM stories WHERE edition=? AND automation=?",
+      )
+      .get(feedData.slug, state).n;
+  assert.equal(count("queued"), 2);
+  let calls = 0;
+  const provider = async (url) => {
+    if (!url.startsWith("https://api.openai.com/")) return new Response(xml);
+    calls++;
+    return Response.json({
+      status: "completed",
+      output: [
+        {
+          content: [
+            {
+              type: "output_text",
+              text: JSON.stringify({
+                title: "Two painters discuss their methods",
+                note: "Friday’s exhibition includes a conversation on materials.",
+                evidence: "works by two local artists",
+              }),
+            },
+          ],
+        },
+      ],
+    });
+  };
+  await Promise.all([
+    req("/jobs/refresh", {}, null, provider),
+    req("/jobs/refresh", {}, null, provider),
+  ]);
+  assert.equal(calls, 1);
+  assert.equal(count("ready"), 1);
+  assert.equal(count("queued"), 1);
+  assert.equal(
+    env.DB.sqlite
+      .prepare(
+        "SELECT COUNT(*) n FROM stories WHERE edition=? AND state='live'",
+      )
+      .get(feedData.slug).n,
+    0,
+  );
+  await post("drafting", { limit: 0 });
+  assert.equal(count("queued"), 0);
+  assert.equal(
+    env.DB.sqlite
+      .prepare("SELECT draft_key FROM editions WHERE slug=?")
+      .get(feedData.slug).draft_key,
+    null,
+  );
+});

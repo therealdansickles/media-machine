@@ -128,8 +128,9 @@ export async function refresh(db, source, fetcher = fetch) {
     const statements = entries.map((s, index) =>
       db
         .prepare(
-          `INSERT OR IGNORE INTO stories(id,edition,url,source,original_title,evidence,title,note,state,source_date,published_at,created_at)
-      SELECT ?,edition,?,label,?,?,?,'',CASE WHEN auto_links=1 THEN 'live' ELSE 'draft' END,?,CASE WHEN auto_links=1 THEN ? END,?
+          `INSERT OR IGNORE INTO stories(id,edition,url,source,original_title,evidence,title,note,state,source_date,published_at,created_at,automation)
+      SELECT ?,edition,?,label,?,?,?,'',CASE WHEN auto_links=1 THEN 'live' ELSE 'draft' END,?,CASE WHEN auto_links=1 THEN ? END,?,
+        CASE WHEN mode='licensed' AND auto_links=0 AND ?=1 AND EXISTS (SELECT 1 FROM editions e WHERE e.slug=sources.edition AND e.draft_limit>0) THEN 'queued' END
       FROM sources WHERE id=? AND next_check=? AND (SELECT COUNT(*) FROM stories WHERE edition=?)<3000`,
         )
         .bind(
@@ -141,6 +142,7 @@ export async function refresh(db, source, fetcher = fetch) {
           s.date,
           s.date || new Date((started - index) * 1000).toISOString(),
           started - index,
+          s.evidence.split(/\s+/).length >= 25 ? 1 : 0,
           source.id,
           lease,
           source.edition,

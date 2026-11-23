@@ -151,7 +151,7 @@ export async function action(env, user, slug, op, d, fetcher = fetch) {
       if (!story) fail("Story not found.", 404);
       await run(
         db,
-        `UPDATE stories SET title=?,note=?,state=?,published_at=CASE WHEN ?='live' THEN COALESCE(published_at,?) ELSE published_at END WHERE edition=? AND id=?`,
+        `UPDATE stories SET automation=NULL,title=?,note=?,state=?,published_at=CASE WHEN ?='live' THEN COALESCE(published_at,?) ELSE published_at END WHERE edition=? AND id=?`,
         field(d.title, 240, true),
         field(d.note, 1500),
         state,
@@ -201,6 +201,37 @@ export async function action(env, user, slug, op, d, fetcher = fetch) {
         address(d.email),
       );
       break;
+    case "drafting": {
+      const limit = Number(d.limit);
+      if (!Number.isInteger(limit) || limit < 0 || limit > 25)
+        fail("Choose a daily limit between 0 and 25.");
+      if (!limit) {
+        await db.batch([
+          db
+            .prepare(
+              "UPDATE editions SET draft_key=NULL,draft_limit=0 WHERE slug=?",
+            )
+            .bind(slug),
+          db
+            .prepare(
+              "UPDATE stories SET automation=NULL WHERE edition=? AND automation IN ('queued','working')",
+            )
+            .bind(slug),
+        ]);
+        break;
+      }
+      const key = field(d.key, 320, true);
+      if (!/^sk-[a-zA-Z0-9_-]{12,300}$/.test(key))
+        fail("Enter an OpenAI API key.");
+      await run(
+        db,
+        "UPDATE editions SET draft_key=?,draft_limit=? WHERE slug=?",
+        await seal(env.EDITION_KEY, "draft/" + slug, key),
+        limit,
+        slug,
+      );
+      break;
+    }
     case "billing": {
       const key = field(d.key, 300),
         link = field(d.payment_link, 120);

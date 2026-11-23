@@ -45,7 +45,7 @@ ${studio ? '<script type="module" src="/studio.js"></script>' : ""}
 <div class="bar-links"><a class="archive-link" href="https://www.mediamachine.app">Entertainment desk</a><a class="studio-nav" href="/studio"${studio ? ' aria-current="page"' : ""}>Curator studio</a></div>
 </nav></header>
 <main id="content">${body}</main>
-<footer><div class="wrap foot-inner"><a class="brand" href="/">${mark}<span class="brand-editions">Editions</span></a><a href="https://www.mediamachine.app">Original publication</a></div></footer>
+<footer><div class="wrap foot-inner"><a class="brand" href="/">${mark}<span class="brand-editions">Editions</span></a><span><a href="/publishing">Publishing &amp; corrections</a> · <a href="https://www.mediamachine.app">Original publication</a></span></div></footer>
 </body></html>`;
 }
 
@@ -133,9 +133,14 @@ export function readerPage(
       <p>${checkout ? "After payment, use the same email address to sign in and read the edition." : "Access is linked to the email address on your membership. Contact the curator if you need access."}</p>
       <div class="actions">${checkout ? `<a class="primary" href="${checkout}" rel="nofollow">Subscribe to this edition</a>` : ""}${typeof loginUrl === "string" && /^\/(?![\/\\])/.test(loginUrl) ? `<a class="secondary" href="${escapeHtml(loginUrl)}" target="_top">Member sign-in</a>` : ""}</div></section>`;
   } else {
-    contents = stories.length
-      ? `<section class="brief-list" aria-label="Published briefs">${stories.map(storyCard).join("")}</section>`
-      : '<p class="empty-state">The first brief has yet to be published.</p>';
+    const briefs = stories.filter((story) => story.note),
+      links = stories.filter((story) => !story.note);
+    contents =
+      briefs.length && links.length
+        ? `<section class="brief-list" aria-label="Editorial briefs"><h2 class="desk-section">Editorial briefs</h2>${briefs.map(storyCard).join("")}</section><section class="brief-list" aria-label="Source wire"><h2 class="desk-section">Source wire</h2>${links.map(storyCard).join("")}</section>`
+        : stories.length
+          ? `<section class="brief-list" aria-label="Published briefs">${stories.map(storyCard).join("")}</section>`
+          : '<p class="empty-state">The first brief has yet to be published.</p>';
   }
   return shell(
     feed.name,

@@ -20,6 +20,13 @@ import {
   Problem,
 } from "./core.js";
 import { refreshDue } from "./feeds.js";
+import { draftNext } from "./draft-queue.js";
+async function sweep(env, fetcher = fetch) {
+  return {
+    checked: await refreshDue(env.DB, fetcher),
+    drafting: await draftNext(env, fetcher),
+  };
+}
 import { canRead, claim } from "./commerce.js";
 const headers = {
   "Cache-Control": "private, no-store",
@@ -74,7 +81,7 @@ export async function handle(req, env, ctx, fetcher = fetch) {
     method = req.method;
   const studio = /^\/api\/(?:create|[a-z0-9-]+\/[a-z-]+)$/.test(path);
   if (path === "/jobs/refresh" && method === "POST")
-    return json({ checked: await refreshDue(db, fetcher) });
+    return json(await sweep(env, fetcher));
   if (studio && method === "POST") {
     if (
       req.headers.get("origin") !== url.origin ||
@@ -104,6 +111,13 @@ export async function handle(req, env, ctx, fetcher = fetch) {
   if (path === "/studio.js")
     return response(client, "application/javascript; charset=utf-8");
   if (path === "/") return response(homePage(example, exampleStories));
+  if (path === "/publishing")
+    return response(
+      shell(
+        "Publishing and corrections",
+        `<article class="wrap message-page"><p class="kicker">Media Machine Editions</p><h1>Publishing and corrections</h1><h2>What readers see</h2><p>Each curator chooses the sources, writes or reviews editorial briefs, and links back to the original publication. A source wire lists publisher headlines. Sponsor placements are labeled.</p><h2>What the studio stores</h2><p>The studio keeps your sign-in identifier, edition settings, shared links, editorial notes and any permitted source material you enter. A members-only edition stores the email addresses used to grant access. Connecting Stripe also stores subscription references and an encrypted restricted key. Curators choose whether to send authorized material to OpenAI for drafting. A connected automatic-drafting key is encrypted.</p><h2>Rights and corrections</h2><p>Use public permalinks and respect publisher terms. Publish material you own, have licensed, or can otherwise lawfully use. If a story needs correction or removal, identify the edition and its article link. Omit private subscriber details and account credentials from public reports.</p><a class="secondary" href="https://github.com/therealdansickles/media-machine/issues/new">Report a publishing issue</a></article>`,
+      ),
+    );
   if (path === "/robots.txt")
     return response(
       "User-agent: *\nDisallow: /studio\nDisallow: /claim/\nDisallow: /api/\n",
@@ -135,7 +149,7 @@ export async function handle(req, env, ctx, fetcher = fetch) {
     const selected = slug
       ? await first(
           db,
-          "SELECT slug,name,description,byline,visibility,sponsor_name,sponsor_url,sponsor_copy,checkout_url,payment_link FROM editions WHERE slug=? AND owner=?",
+          "SELECT slug,name,description,byline,visibility,sponsor_name,sponsor_url,sponsor_copy,checkout_url,payment_link,draft_limit FROM editions WHERE slug=? AND owner=?",
           slug,
           user.id,
         )
@@ -154,7 +168,7 @@ export async function handle(req, env, ctx, fetcher = fetch) {
           ),
           all(
             db,
-            "SELECT id,url,source,original_title,title,note,state,source_date,published_at,evidence FROM stories WHERE edition=? ORDER BY created_at DESC,id LIMIT 26 OFFSET ?",
+            "SELECT id,url,source,original_title,title,note,state,source_date,published_at,evidence,automation FROM stories WHERE edition=? ORDER BY created_at DESC,id LIMIT 26 OFFSET ?",
             slug,
             offset,
           ),
@@ -236,5 +250,5 @@ export async function serve(req, env, ctx, fetcher = fetch) {
 }
 export default {
   fetch: (req, env, ctx) => serve(req, env, ctx),
-  scheduled: (_event, env, ctx) => ctx.waitUntil(refreshDue(env.DB)),
+  scheduled: (_event, env, ctx) => ctx.waitUntil(sweep(env)),
 };
