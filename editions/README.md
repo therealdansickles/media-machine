@@ -26,6 +26,14 @@ Stripe credentials are encrypted using AES-GCM with the edition ID as authentica
 
 ## Sources and rights
 
+### Receive newsletters by email
+
+Studio’s private email inbox accepts pasted text and .eml files without a mail provider. It keeps up to 200 messages per edition and 120,000 characters per message. Images, attachments and raw MIME are discarded. Curators can search the delivered text, delete messages, or write a separate draft attributed to a public source.
+
+To enable forwarding for every curator, configure a dedicated Postmark inbound stream. Set the Worker secrets `POSTMARK_INBOUND_ADDRESS` to its generated address (hash@inbound.postmarkapp.com) and `POSTMARK_WEBHOOK_SECRET` to a random password of at least 24 URL-safe characters. Set the stream’s inbound webhook to `https://editions:PASSWORD@YOUR-SITE/inbound/postmark`, substituting that password. Curators can then generate or disable private plus-addresses. No DNS change is needed for Postmark's own domain. The server authenticates the provider, matches the actual envelope recipient and deduplicates deliveries by message ID. Keep webhook JSON under 4 MB; omit raw email in provider settings. A single oversized message can be imported as text.
+
+Alternatively, a curator with a dedicated Postmark stream can choose **Connect a Postmark stream** in Studio and follow the per-edition instructions. Use a unique webhook password, never a Postmark API token. Verify by forwarding a real message containing a distinctive subject and confirming it appears only in the expected edition. An email sender address alone does not establish their identity.
+
 A subscription grants the access the publisher offers. Each curator is responsible for their rights to reuse material. Public link mode stores the publisher title, date and permalink. Licensed description mode can retain up to 3,500 characters privately for editorial review. Avoid private feed tokens and subscriber copies. No full web article is fetched on link submission. Write your own analysis and preserve attribution and each publisher's paywall. Source links are visible in the web reader and RSS.
 
 [U.S. Copyright Office fair use guidance](https://www.copyright.gov/fair-use/more-info.html) · [Substack Terms of Use](https://substack.com/tos) · [Stripe Payment Links after checkout](https://docs.stripe.com/payment-links/post-payment)

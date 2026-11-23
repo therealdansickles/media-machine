@@ -171,6 +171,80 @@ test("Atom alternate links, attribution and source dates survive import", () => 
   assert.equal(parsed[0].evidence, "Permitted source material");
   assert.equal(parsed[0].date, "2026-11-20T15:00:00.000Z");
 });
+
+test("pasted mail stays private, is searchable, and creates a separate draft without source text", async () => {
+  const {env,req,post,create} = setup();
+  await create();
+  await post("settings",{...feedData,visibility:"public"});
+  const body="Member copy <img src=x> only.";
+  const {redirect} = await (await post("mail-paste",{subject:"Dispatch",body})).json();
+  const id = new URL(redirect,origin).searchParams.get("message");
+  assert.match(await (await req(redirect,null,"owner")).text(),/Member copy &lt;img/);
+  assert.equal((await req(redirect,null,"other")).status,404);
+  assert.equal((await req(redirect)).status,303);
+  assert.match(await (await req("/studio/mail?edition=paint-desk&q=member&filter=unfiled",null,"owner")).text(),/Dispatch/);
+  assert.match(await (await req("/studio?edition=paint-desk",null,"owner")).text(),/Dispatch/);
+  const brief={id,url:article,source:"Publication",title:"My headline",note:"My observation"};
+  assert.equal((await req("/api/paint-desk/mail-brief",brief,"other")).status,404);
+  await post("mail-brief",brief);
+  await post("mail-brief",brief);
+  const stories=env.DB.sqlite.prepare("SELECT * FROM stories").all();
+  assert.equal(stories.length,1);
+  assert.equal(stories[0].state,"draft");
+  assert.ok(!stories[0].evidence);
+  assert.ok(!stories[0].automation);
+  assert.match(await (await req("/studio/mail?edition=paint-desk&filter=filed",null,"owner")).text(),/Dispatch/);
+  assert.doesNotMatch(await (await req("/studio/mail?edition=paint-desk&filter=unfiled",null,"owner")).text(),/Dispatch/);
+  await post("edit",{...brief,id:stories[0].id,state:"live"});
+  for (const suffix of ["","/rss.xml"]) {
+    const page=await (await req("/f/paint-desk"+suffix)).text();
+    assert.match(page,/My headline/);
+    assert.doesNotMatch(page,/Member copy|Dispatch/);
+  }
+  await post("mail-delete",{id});
+  assert.equal((await req(redirect,null,"owner")).status,404);
+  assert.match(await (await req("/f/paint-desk")).text(),/My observation/);
+});
+
+test("authenticated .eml import decodes MIME and deduplicates a second upload", async () => {
+  const {env,create,req}=setup();
+  await create();
+  const raw=["Subject: =?UTF-8?Q?Caf=C3=A9_notes?=","Message-ID: <test45@news.example.org>","MIME-Version: 1.0","Content-Type: text/plain; charset=UTF-8","Content-Transfer-Encoding: base64","",btoa("The complete delivered note.")].join("\r\n");
+  const upload=(user)=>serve(new Request(origin+"/api/paint-desk/mail-upload",{method:"POST",body:raw,headers:{origin,"content-type":"application/octet-stream","oai-authenticated-user-id":user,"oai-authenticated-user-email":user+"@example.org"}}),env,{});
+  assert.equal((await upload("other")).status,403);
+  const a=await (await upload("owner")).json();
+  const b=await (await upload("owner")).json();
+  assert.ok(a.redirect);
+  assert.equal(a.redirect,b.redirect);
+  const page=await (await req(a.redirect,null,"owner")).text();
+  assert.match(page,/Café notes/);
+  assert.match(page,/The complete delivered note/);
+});
+
+test("provider deliveries require the correct stream credentials and envelope recipient; rotation invalidates an old address", async () => {
+  const {env,post,create} = setup();
+  await create();
+  const base="abcd1234@inbound.postmarkapp.com", pass="test-webhook-password-123456789";
+  const alias=()=>env.DB.sqlite.prepare("SELECT mail_alias FROM editions").get().mail_alias;
+  const data={mode:"custom",base,password:pass};
+  assert.equal((await post("mail-connect",data)).status,200);
+  const send=(route,password,recipient)=>serve(new Request(origin+"/inbound/postmark"+route,{method:"POST",headers:{"content-type":"application/json",authorization:"Basic "+btoa("editions:"+password)},body:JSON.stringify({To:recipient,OriginalRecipient:recipient,Subject:"Newsletter",MessageID:"mock-delivery",HtmlBody:"<style>hidden</style><p>Actual <b>news</b></p><img src='https://tracker.example.org'>",Attachments:[{Content:"discarded"}]})}),env,{});
+  let recipient=base.replace("@","+"+alias()+"@");
+  assert.equal((await send("/paint-desk","bad",recipient)).status,403);
+  assert.equal((await send("/paint-desk",pass,"other"+recipient)).status,403);
+  assert.equal((await send("/paint-desk",pass,recipient)).status,200);
+  assert.equal((await send("/paint-desk",pass,recipient)).status,200);
+  assert.deepEqual(env.DB.sqlite.prepare("SELECT body FROM private_mail").all().map(m=>m.body),["Actual news"]);
+  await post("mail-connect",data);
+  assert.equal((await send("/paint-desk",pass,recipient)).status,403);
+  env.POSTMARK_INBOUND_ADDRESS=base;
+  env.POSTMARK_WEBHOOK_SECRET=pass;
+  await post("mail-connect",{mode:"hosted"});
+  recipient=base.replace("@","+"+alias()+"@");
+  assert.equal((await send("",pass,recipient)).status,200);
+  await post("mail-disable",{});
+  assert.equal((await send("",pass,recipient)).status,403);
+});
 test("failed source stays visible to the curator and retries after its backoff", async () => {
   const { env, post, create } = setup();
   await create();

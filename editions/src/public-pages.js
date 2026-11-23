@@ -94,7 +94,7 @@ export function homePage(example, stories = []) {
       <div class="actions"><a class="primary" href="/studio">Create an edition</a>${example ? `<a class="plain-link" href="${editionPath(example.slug)}">Read a sample</a>` : ""}</div>
     </div>${example ? compactCover(example, stories) : ""}</section>
     <section class="workflow"><h2>Inside the studio</h2><div class="workflow-grid">
-      <article><h3>Follow your beat</h3><p>Bring in RSS feeds or add a story link when someone shares a piece worth saving.</p></article>
+      <article><h3>Follow your beat</h3><p>Follow RSS feeds, save newsletters in your private inbox, or add a story link from your phone.</p></article>
       <article><h3>Write the brief</h3><p>Give each pick a headline and a short note explaining why your readers should open the original.</p></article>
       <article><h3>Find your audience</h3><p>Share a public edition, feature a sponsor, or offer a members-only feed.</p></article>
     </div><p><a class="plain-link" href="/guide">Read the curator guide</a></p></section>

@@ -270,7 +270,7 @@ export function studioPage(
   sources = [],
   stories = [],
   members = [],
-  { origin = "", offset = 0, hasMore = false } = {},
+  { origin = "", offset = 0, hasMore = false, filter = "", mailCount = 0, recentMail = [] } = {},
 ) {
   if (!editions.length || !selected) {
     return shell(
@@ -279,7 +279,7 @@ export function studioPage(
       { studio: true },
     );
   }
-  const path = deskPath(selected.slug);
+  const path = deskPath(selected.slug)+(filter ? "&amp;filter="+filter : "");
   const pageOffset = Math.max(0, Number(offset) || 0);
   const selector = `<details class="edition-switch"><summary>Switch edition</summary><ul>${editions.map((ed) => `<li><a href="${deskPath(ed.slug)}"${ed.slug === selected.slug ? ' aria-current="page"' : ""}>${h(ed.name)}</a></li>`).join("")}</ul></details>`;
   return shell(
@@ -290,8 +290,11 @@ export function studioPage(
     <div class="studio-subhead"><span>${selected.visibility === "draft" ? "Private draft" : selected.visibility === "members" ? "Members-only edition" : "Public edition"}</span><a href="/f/${encodeURIComponent(selected.slug)}">${selected.visibility === "draft" ? "Preview as curator" : "Open reader edition"}</a><a href="/guide#phone">Set up phone sharing</a></div>
     ${selected.visibility === "draft" ? '<p>Save your first brief, then choose who can read it in <a href="#settings">Publication settings</a>.</p>' : ""}</header>
     <div class="studio-layout"><section class="inbox"><h2>Editorial inbox</h2>
+    <div class="actions inbox-tools"><a class="secondary" href="/studio/mail?edition=${encodeURIComponent(selected.slug)}">Private email inbox (${mailCount})</a></div>
+    ${recentMail.length ? `<ul class="record-list" aria-label="Recent private emails">${recentMail.map(m=>`<li><a href="/studio/mail?edition=${encodeURIComponent(selected.slug)}&amp;message=${encodeURIComponent(m.id)}">${h(m.subject)}</a></li>`).join("")}</ul>` : ""}
+    <nav class="inbox-filters" aria-label="Filter stories">${[["","All"],["draft","Drafts"],["live","Published"],["archived","Archived"]].map(([v,t])=>`<a href="${deskPath(selected.slug)}${v ? "&amp;filter="+v : ""}"${v===filter ? ' aria-current="page"' : ""}>${t}</a>`).join("")}</nav>
     ${sharedLink(selected, editions)}
-    ${stories.length ? stories.map((story) => storyEditor(selected, story)).join("") : `<p class="empty-state">Your inbox is empty. Add a feed in Sources or save a shared story to start your first brief.</p>`}
+    ${stories.length ? stories.map((story) => storyEditor(selected, story)).join("") : `<p class="empty-state">${filter ? "No stories in this view." : "Your inbox is empty. Add a feed in Sources or save a shared story to start your first brief."}</p>`}
     ${pageOffset > 0 || hasMore ? `<nav class="actions pagination" aria-label="Inbox pages">${pageOffset > 0 ? `<a class="secondary" href="${path}&amp;offset=${Math.max(0, pageOffset - 25)}">Previous briefs</a>` : ""}${hasMore ? `<a class="secondary" href="${path}&amp;offset=${pageOffset + 25}">Next briefs</a>` : ""}</nav>` : ""}
     </section><aside class="studio-rail"><h2>Edition desk</h2>${sourcesPanel(selected, sources)}${draftingPanel(selected)}${settings(selected)}${membersPanel(selected, members)}${billingPanel(selected, origin)}${panel("Create another edition", newEdition())}</aside></div>
   </div>`,

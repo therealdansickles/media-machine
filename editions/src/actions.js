@@ -3,6 +3,7 @@ import { refresh } from "./feeds.js";
 import { seal } from "./commerce.js";
 import { generate } from "./brief.js";
 import { example } from "./example.js";
+import { mailAction } from "./mail.js";
 const choices = (v, values) =>
   values.includes(v) ? v : fail("Choose a valid option.");
 const address = (v) => {
@@ -49,6 +50,7 @@ export async function action(env, user, slug, op, d, fetcher = fetch) {
     user.id,
   );
   if (!feed) fail("Edition not found.", 404);
+  if (op?.startsWith("mail-")) return mailAction(env,feed,op,d);
   switch (op) {
     case "settings": {
       const url = optionalUrl(d.sponsor_url),
