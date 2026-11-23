@@ -1,0 +1,20 @@
+name = "media-machine-editions"
+main = "dist/server/index.js"
+compatibility_date = "2026-05-01"
+
+[build]
+command = "npm run build"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "editions"
+database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+migrations_dir = "drizzle"
+
+[vars]
+IDENTITY_MODE = "cloudflare-access"
+ACCESS_TEAM = "REPLACE_WITH_TEAM_SLUG"
+ACCESS_AUD = "REPLACE_WITH_ACCESS_APPLICATION_AUD"
+
+[triggers]
+crons = ["*/10 * * * *"]

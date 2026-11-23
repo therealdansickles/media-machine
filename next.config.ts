@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    return [{ source: "/editions", destination: "https://media-machine-editions.sickles.chatgpt.site", permanent: false }];
+  },
 };
 
 export default nextConfig;

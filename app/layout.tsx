@@ -1,97 +1,23 @@
-import type React from "react"
-
-
-
+import type { ReactNode } from "react"
 import type { Metadata } from "next"
-
-import { Fraunces } from "next/font/google"
-
 import { Analytics } from "@vercel/analytics/next"
-
 import { ThemeProvider } from "@/components/theme-provider"
-
+import "@fontsource-variable/fraunces"
 import "./globals.css"
 
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
-  weight: ["400", "700", "900"],
-})
-
 export const metadata: Metadata = {
-
-  // <CHANGE> Updated metadata for prestige feed app
-
   title: "MEDIA / MACHINE - Entertainment Industry News",
-
-  description: "Premium editorial feed covering streaming wars, box office, and Hollywood business news",
-
-  generator: "v0.app",
-
-  icons: {
-
-    icon: [
-
-      {
-
-        url: "/icon-light-32x32.png",
-
-        media: "(prefers-color-scheme: light)",
-
-      },
-
-      {
-
-        url: "/icon-dark-32x32.png",
-
-        media: "(prefers-color-scheme: dark)",
-
-      },
-
-      {
-
-        url: "/icon.svg",
-
-        type: "image/svg+xml",
-
-      },
-
-    ],
-
-    apple: "/apple-icon.png",
-
-  },
-
+  description: "Reporting and editorial briefs on the business of film, television and streaming.",
+  icons: { icon: "/icon.svg" },
 }
 
-export default function RootLayout({
-
-  children,
-
-}: Readonly<{
-
-  children: React.ReactNode
-
-}>) {
-
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-
     <html lang="en" suppressHydrationWarning>
-
-      <body className={`${fraunces.variable} font-sans antialiased`}>
-
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-
-          {children}
-
-        </ThemeProvider>
-
+      <body className="font-sans antialiased">
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>{children}</ThemeProvider>
         <Analytics />
-
       </body>
-
     </html>
-
   )
-
 }

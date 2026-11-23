@@ -1,0 +1,81 @@
+function report(form, message, failed = false) {
+  const output = form.querySelector(".feedback");
+  if (!output) return;
+  output.hidden = false;
+  output.textContent = message;
+  output.classList.toggle("form-error", failed);
+}
+
+function nextPage(redirect) {
+  if (typeof redirect !== "string" || !redirect.startsWith("/") ||
+      redirect.startsWith("//") || redirect.includes("\\")) return null;
+  const target = new URL(redirect, location.origin);
+  return target.origin === location.origin ? target.href : null;
+}
+
+document.addEventListener("submit", async (event) => {
+  const form = event.target;
+  if (!(form instanceof HTMLFormElement) || form.method !== "post") return;
+  event.preventDefault();
+  if (form.getAttribute("aria-busy") === "true") return;
+  if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) return;
+
+  const clicked = event.submitter;
+  const data = new FormData(form);
+  if (clicked?.name) data.set(clicked.name, clicked.value);
+  const buttons = Array.from(form.querySelectorAll('button[type="submit"]'));
+  const endpoint = new URL(form.action);
+  if (endpoint.origin !== location.origin || !endpoint.pathname.startsWith("/api/")) {
+    report(form, "The form destination is unavailable. Reload and try again.", true);
+    return;
+  }
+
+  form.setAttribute("aria-busy", "true");
+  for (const button of buttons) button.disabled = true;
+  report(form, form.hasAttribute("data-generate") ? "Drafting your brief…" : "Saving…");
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST", credentials: "same-origin", redirect: "error",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify(Object.fromEntries(data)),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : result.message || "The request could not be completed. Please try again.");
+    if (form.hasAttribute("data-generate")) {
+      const draft = result.draft;
+      const editor = form.closest(".story-editor")?.querySelector("[data-story-edit]");
+      if (!editor || typeof draft?.title !== "string" || typeof draft?.note !== "string") {
+        throw new Error("The draft was incomplete. Your current edits are still in place.");
+      }
+      editor.elements.namedItem("title").value = draft.title;
+      editor.elements.namedItem("note").value = draft.note;
+      report(form, "Draft added to the editor. Review it before saving.");
+      editor.elements.namedItem("title").focus();
+      return;
+    }
+    const target = nextPage(result.redirect);
+    if (target) location.assign(target);
+    else if (result.message) {
+      const status = document.getElementById("studio-notice");
+      try { sessionStorage.setItem("edition-studio-notice", String(result.message).slice(0, 300)); } catch {}
+      if (status) status.textContent = result.message;
+      location.reload();
+    } else location.reload();
+  } catch (error) {
+    report(form, error instanceof Error ? error.message : "Could not reach the studio. Please try again.", true);
+  } finally {
+    for (const input of form.querySelectorAll('input[type="password"]')) input.value = "";
+    form.removeAttribute("aria-busy");
+    for (const button of buttons) button.disabled = false;
+  }
+});
+
+try {
+  const message = sessionStorage.getItem("edition-studio-notice");
+  sessionStorage.removeItem("edition-studio-notice");
+  const notice = document.getElementById("studio-notice");
+  if (message && notice) {
+    notice.hidden = false;
+    notice.textContent = message;
+  }
+} catch {}

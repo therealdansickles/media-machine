@@ -324,3 +324,5 @@
   animation: marquee 30s linear infinite;
 
 }
+
+:root { --font-fraunces: "Fraunces Variable", Georgia, serif; }

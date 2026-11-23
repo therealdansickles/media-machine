@@ -1,5 +1,9 @@
 # Media Machine
 
+[Open Media Machine Editions](https://media-machine-editions.sickles.chatgpt.site) to create a specialist publication from RSS, Atom, public Substack feeds and shared links. Each curator has a private studio, a shareable reader, editorial notes, sponsor placements and optional memberships. See the [curator and self-hosting guide](editions/README.md).
+
+## Original entertainment publication
+
 An entertainment-industry news reader built with Next.js, React, Tailwind CSS,
 and Supabase. The feed shows active articles with source links, analyst summaries,
 and extracted entities. Each article has a detail page and sharing controls.

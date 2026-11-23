@@ -215,8 +215,7 @@ export function ArticleView({ article, relatedArticles }: ArticleViewProps) {
         <div className="font-mono text-sm uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-6">
           SOURCE: {article.source_name}
           <span className="text-gray-400 dark:text-gray-600 mx-2">{"//"}</span>
-          {article.reporter_name || 'Staff Writer'}
-          <span className="text-gray-400 dark:text-gray-600 mx-2">{"//"}</span>
+          {article.reporter_name && <>{article.reporter_name} · </>}
           {formatTimeAgo(article.created_at)}
         </div>
 

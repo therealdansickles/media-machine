@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 
 import { ArticleCard } from "./article-card"
@@ -8,12 +8,6 @@ import { ArticleCard } from "./article-card"
 import { Header } from "./header"
 
 import { SidebarStack } from "./sidebar-stack"
-
-import { SocialPulse } from "./social-pulse"
-
-import { TickerInterrupter } from "./ticker-interrupter"
-
-import { TrendingCreators } from "./trending-creators"
 
 import { getSupabase } from "@/lib/supabase"
 
@@ -241,32 +235,7 @@ export function PrestigeFeed() {
               </div>
             )}
 
-            {articles.slice(1).map((article, index) => (
-
-              <React.Fragment key={article.id}>
-
-                <ArticleCard {...article} />
-
-                {/* Insert ticker after second article */}
-                {index === 1 && <TickerInterrupter />}
-
-                {/* Mobile: Insert SocialPulse after article 2 */}
-                {index === 1 && (
-                  <div className="block lg:hidden px-4 py-6">
-                    <SocialPulse />
-                  </div>
-                )}
-
-                {/* Mobile: Insert TrendingCreators after article 4 (index 4) */}
-                {index === 4 && (
-                  <div className="block lg:hidden px-4 py-6">
-                    <TrendingCreators />
-                  </div>
-                )}
-
-              </React.Fragment>
-
-            ))}
+            {articles.slice(1).map(article => <ArticleCard key={article.id} {...article} />)}
 
           </div>
 
@@ -297,7 +266,7 @@ export function PrestigeFeed() {
         {/* Sidebar - Right Column (4 cols on desktop, hidden on mobile) */}
         <div className="hidden lg:block lg:col-span-4">
 
-          <SidebarStack />
+          <SidebarStack sources={[...new Set(articles.map(article => article.source).filter((s): s is string => Boolean(s)))]} />
 
         </div>
 

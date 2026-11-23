@@ -1,4 +1,8 @@
-# Media Machine - Project Status & Comprehensive Roadmap
+# Media Machine project status
+
+The repository now includes the multi-curator Editions product in [editions](editions/README.md). The original publication retains its existing Supabase article URLs. The historical roadmap below describes the earlier single-publication MVP.
+
+## Historical roadmap
 
 **Repository review:** September 14, 2026
 
