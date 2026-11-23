@@ -55,9 +55,15 @@ export async function action(env, user, slug, op, d, fetcher = fetch) {
         name = field(d.sponsor_name, 100),
         copy = field(d.sponsor_copy, 300);
       if ((url || copy) && !name) fail("Give the sponsor a name.");
+      const until = d.sponsor_until === undefined ? feed.sponsor_until : field(d.sponsor_until, 10);
+      if (until) {
+        const date = new Date(until + "T00:00:00Z");
+        if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== until)
+          fail("Choose a valid sponsor end date.");
+      }
       await run(
         db,
-        "UPDATE editions SET name=?,description=?,byline=?,visibility=?,sponsor_name=?,sponsor_copy=?,sponsor_url=?,checkout_url=? WHERE slug=?",
+        "UPDATE editions SET name=?,description=?,byline=?,visibility=?,sponsor_name=?,sponsor_copy=?,sponsor_url=?,sponsor_until=?,checkout_url=? WHERE slug=?",
         field(d.name, 90, true),
         field(d.description, 400),
         field(d.byline, 90, true),
@@ -65,6 +71,7 @@ export async function action(env, user, slug, op, d, fetcher = fetch) {
         name,
         copy,
         url,
+        until || null,
         optionalUrl(d.checkout_url),
         slug,
       );
@@ -121,10 +128,11 @@ export async function action(env, user, slug, op, d, fetcher = fetch) {
       break;
     case "story": {
       const title = field(d.title, 240, true);
+      const state = choices(d.state ?? "draft", ["draft", "live"]);
       const res = await run(
         db,
-        `INSERT OR IGNORE INTO stories(id,edition,url,source,original_title,evidence,title,note,state,created_at)
-        SELECT ?,?,?,?,?,?,?,?,'draft',? WHERE (SELECT count(*) FROM stories WHERE edition=?)<3000`,
+        `INSERT OR IGNORE INTO stories(id,edition,url,source,original_title,evidence,title,note,state,members_only,published_at,created_at)
+        SELECT ?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT count(*) FROM stories WHERE edition=?)<3000`,
         crypto.randomUUID(),
         slug,
         publicUrl(d.url),
@@ -133,12 +141,15 @@ export async function action(env, user, slug, op, d, fetcher = fetch) {
         field(d.evidence, 3500),
         title,
         field(d.note, 1500),
+        state,
+        choices(d.audience ?? "edition", ["edition","members"]) === "members" ? 1 : 0,
+        state === "live" ? new Date().toISOString() : null,
         now(),
         slug,
       );
       if (!res.meta.changes)
         fail("This link already exists or the edition is full.", 409);
-      break;
+      return { message: state === "draft" ? "Saved to your editorial inbox." : feed.visibility === "draft" ? "Brief saved. Set the edition to Public or Members in Publication settings to share it." : "Brief published." };
     }
     case "edit": {
       const state = choices(d.state, ["draft", "live", "archived"]);
@@ -151,10 +162,11 @@ export async function action(env, user, slug, op, d, fetcher = fetch) {
       if (!story) fail("Story not found.", 404);
       await run(
         db,
-        `UPDATE stories SET automation=NULL,title=?,note=?,state=?,published_at=CASE WHEN ?='live' THEN COALESCE(published_at,?) ELSE published_at END WHERE edition=? AND id=?`,
+        `UPDATE stories SET automation=NULL,title=?,note=?,state=?,members_only=COALESCE(?,members_only),published_at=CASE WHEN ?='live' THEN COALESCE(published_at,?) ELSE published_at END WHERE edition=? AND id=?`,
         field(d.title, 240, true),
         field(d.note, 1500),
         state,
+        d.audience == null ? null : choices(d.audience, ["edition","members"]) === "members" ? 1 : 0,
         state,
         new Date().toISOString(),
         slug,

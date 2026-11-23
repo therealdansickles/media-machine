@@ -1,5 +1,7 @@
 import css from "./style.css";
 import client from "./studio-client.txt";
+import sharing from "./sharing-client.txt";
+import { guide, capturePage } from "./guide.js";
 import {
   homePage,
   readerPage,
@@ -27,7 +29,7 @@ async function sweep(env, fetcher = fetch) {
     drafting: await draftNext(env, fetcher),
   };
 }
-import { canRead, claim } from "./commerce.js";
+import { canRead, hasMembership, claim } from "./commerce.js";
 const headers = {
   "Cache-Control": "private, no-store",
   "X-Content-Type-Options": "nosniff",
@@ -110,6 +112,9 @@ export async function handle(req, env, ctx, fetcher = fetch) {
   if (path === "/style.css") return response(css, "text/css; charset=utf-8");
   if (path === "/studio.js")
     return response(client, "application/javascript; charset=utf-8");
+  if (path === "/sharing.js") return response(sharing, "application/javascript; charset=utf-8");
+  if (path === "/guide") return response(guide(url.origin));
+  if (path === "/capture") return response(capturePage());
   if (path === "/") return response(homePage(example, exampleStories));
   if (path === "/publishing")
     return response(
@@ -149,7 +154,7 @@ export async function handle(req, env, ctx, fetcher = fetch) {
     const selected = slug
       ? await first(
           db,
-          "SELECT slug,name,description,byline,visibility,sponsor_name,sponsor_url,sponsor_copy,checkout_url,payment_link,draft_limit FROM editions WHERE slug=? AND owner=?",
+          "SELECT slug,name,description,byline,visibility,sponsor_name,sponsor_url,sponsor_copy,sponsor_until,checkout_url,payment_link,draft_limit FROM editions WHERE slug=? AND owner=?",
           slug,
           user.id,
         )
@@ -168,7 +173,7 @@ export async function handle(req, env, ctx, fetcher = fetch) {
           ),
           all(
             db,
-            "SELECT id,url,source,original_title,title,note,state,source_date,published_at,evidence,automation FROM stories WHERE edition=? ORDER BY created_at DESC,id LIMIT 26 OFFSET ?",
+            "SELECT id,url,source,original_title,title,note,state,members_only,source_date,published_at,evidence,automation FROM stories WHERE edition=? ORDER BY created_at DESC,id LIMIT 26 OFFSET ?",
             slug,
             offset,
           ),
@@ -197,7 +202,7 @@ export async function handle(req, env, ctx, fetcher = fetch) {
   if (feed.visibility === "draft" && feed.owner !== user?.id)
     fail("This edition is unavailable.", 404);
   if (type === "claim") {
-    if (asRSS || feed.visibility !== "members")
+    if (asRSS || feed.visibility === "draft")
       fail("This membership link is unavailable.", 404);
     if (!user) return redirect(signIn(path + url.search, env));
     await claim(
@@ -212,11 +217,15 @@ export async function handle(req, env, ctx, fetcher = fetch) {
   if (asRSS && feed.visibility !== "public")
     fail("This edition does not offer a public RSS feed.", 403);
   const allowed = await canRead(env, feed, user, fetcher);
+  const hasPaidBriefs = !asRSS && feed.visibility === "public" && !!await first(db,
+    "SELECT 1 FROM stories WHERE edition=? AND state='live' AND members_only=1 LIMIT 1", slug);
+  const readPremium = !asRSS && (feed.visibility !== "public" ? allowed :
+    hasPaidBriefs && await hasMembership(env, feed, user, fetcher));
   const items = allowed
     ? await all(
         db,
-        "SELECT title,note,url,source,published_at FROM stories WHERE edition=? AND state='live' ORDER BY published_at DESC,id LIMIT 100",
-        slug,
+        "SELECT id,title,note,url,source,published_at,members_only FROM stories WHERE edition=? AND state='live' AND (members_only=0 OR ?=1) ORDER BY published_at DESC,id LIMIT 100",
+        slug, readPremium ? 1 : 0,
       )
     : [];
   if (asRSS)
@@ -227,6 +236,7 @@ export async function handle(req, env, ctx, fetcher = fetch) {
   return response(
     readerPage(feed, items, {
       locked: !allowed,
+      offer: hasPaidBriefs && !readPremium,
       member: feed.visibility !== "public",
       loginUrl: user ? null : signIn(path, env),
     }),

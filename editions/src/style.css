@@ -206,3 +206,8 @@ dialog::backdrop { background: rgb(20 24 17 / .6); }
 }
 
 .desk-section { margin: 2.25rem 0 1rem; font: 650 1rem var(--mono); text-transform: uppercase; letter-spacing: .07em; }
+.guide { max-width: 48rem; padding-bottom: 3rem; }
+.guide h2 { margin-top: 2rem; }
+.guide li { margin: .6rem 0; }
+.guide .claim-address { overflow-wrap: anywhere; }
+.guide .panel { max-width: 36rem; }

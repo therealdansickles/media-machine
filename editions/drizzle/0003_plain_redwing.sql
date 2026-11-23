@@ -1,0 +1,1 @@
+ALTER TABLE `editions` ADD `sponsor_until` text;

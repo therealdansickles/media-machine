@@ -12,6 +12,10 @@
 
 ## Earn from an edition
 
+Open `/guide` for the iPhone share-sheet Shortcut setup, desktop bookmarklet, and membership walkthrough. Bookmark `/capture` to start with a public article URL. The captured link stays in the browser tab through sign-in. In Studio, choose your edition, review the headline and note, and publish directly or save a draft.
+
+For free and paid coverage at one address, keep the edition public and set individual briefs to **Members only**. Those entries are omitted entirely from public RSS, including for signed-in readers. Existing public briefs remain public. Feed readers may retain material published before a change in access.
+
 **Direct sponsors.** Enter the sponsor’s name, link and approved copy in Publication settings. The reader displays a clearly labeled sponsor placement. Sell the placement directly and arrange billing with the sponsor.
 
 **Manual memberships.** Add an external checkout URL and select members-only visibility. Grant the subscriber’s login email access through a chosen expiry date after confirming payment. Revoke it from the same desk. The curator handles buyer communication.

@@ -120,6 +120,48 @@ test("creator can create, import, deduplicate, publish, sponsor, gate, revoke an
     /Gallery opens/,
   );
 });
+test("mixed edition keeps premium items out of public HTML and all RSS, including after legacy edits", async () => {
+  const {env, req, post, create} = setup();
+  await create();
+  await post("settings", {...feedData, visibility:"public"});
+  const shared = {url:article, source:"Art News", title:"Public story", state:"live"};
+  assert.equal((await post("story", shared)).status, 200);
+  const paid = {...shared, title:"Private briefing", url:article+"/paid", note:"Paid analysis", audience:"members"};
+  assert.equal((await post("story", paid)).status, 200);
+  assert.equal((await post("story", paid)).status, 409);
+  const id = env.DB.sqlite.prepare("SELECT id FROM stories WHERE members_only=1").get().id;
+  await post("edit", {id,title:paid.title,note:paid.note,state:"live"});
+  await post("member", {email:"reader@example.org", expires:"2099-12-12"});
+  const page = async (path,user) => (await req("/f/paint-desk"+path,null,user)).text();
+  for (const user of [undefined, "other"]) {
+    const publicPage = await page("",user);
+    assert.match(publicPage, /Public story/);
+    assert.doesNotMatch(publicPage, /Private briefing|Paid analysis|colour\/paid/);
+  }
+  for (const user of ["owner","reader"]) {
+    assert.match(await page("",user), /Paid analysis/);
+    assert.doesNotMatch(await page("/rss.xml",user), /Private briefing|Paid analysis|colour\/paid/);
+  }
+  await post("revoke", {email:"reader@example.org"});
+  assert.doesNotMatch(await page("","reader"), /Paid analysis/);
+});
+test("capture is public and studio retains capture intent through sign-in", async () => {
+  const {req} = setup();
+  assert.match(await (await req("/capture")).text(), /capture-link/);
+  assert.match(await (await req("/guide")).text(), /Show in Share Sheet/);
+  assert.equal((await req("/studio?capture=1")).headers.get("location"), "/signin-with-chatgpt?return_to=%2Fstudio%3Fcapture%3D1");
+});
+test("expired sponsor bookings stop rendering, and legacy settings saves preserve their expiry", async () => {
+  const {req,post,create} = setup();
+  await create();
+  const settings = {...feedData, visibility:"public", sponsor_name:"Gallery Sponsor"};
+  assert.equal((await post("settings",{...settings,sponsor_until:"2099-02-30"})).status,400);
+  await post("settings",{...settings,sponsor_until:"2020-02-28"});
+  await post("settings",settings);
+  assert.doesNotMatch(await (await req("/f/paint-desk")).text(), /Gallery Sponsor/);
+  await post("settings",{...settings,sponsor_until:"2099-12-31"});
+  assert.match(await (await req("/f/paint-desk")).text(), /Gallery Sponsor/);
+});
 test("Atom alternate links, attribution and source dates survive import", () => {
   const atom =
     '<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>Colour</title><link rel="self" href="https://art.example.org/api"/><link href="/colour"/><updated>2026-11-20T15:00:00Z</updated><summary>Permitted source material</summary></entry></feed>';

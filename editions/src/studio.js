@@ -75,9 +75,10 @@ function settings(feed) {
       ${field("Sponsor name", "sponsor_name", feed.sponsor_name)}
       ${field("Sponsor URL", "sponsor_url", feed.sponsor_url, 'type="url" placeholder="https://"')}
       ${area("Sponsor message", "sponsor_copy", feed.sponsor_copy, 'rows="2"')}
+      ${field("Show sponsor through (UTC, optional)", "sponsor_until", feed.sponsor_until, 'type="date"')}
     </fieldset>
     ${field("Membership checkout URL", "checkout_url", feed.checkout_url, 'type="url" placeholder="https://"')}
-    <p class="field-help">Members-only editions can link to your checkout. Grant readers access below or connect Stripe.</p>
+    <p class="field-help">Use a checkout for an entire member edition or for individual member briefs in a public edition. Grant access below or connect Stripe.</p>
     ${act("Save publication settings")}
   `,
     ),
@@ -120,19 +121,23 @@ function sourcesPanel(feed, sources) {
     "sources",
   );
 }
-function sharedLink(feed) {
+function audience(value) {
+  return `<label>Brief access<select name="audience"><option value="edition">Edition readers</option><option value="members"${value ? " selected" : ""}>Members only</option></select></label>`;
+}
+function sharedLink(feed, editions) {
   return panel(
     "Add a shared story",
     form(
       pathFor(feed.slug) + "/story",
       `
+    ${editions.length > 1 ? `<label>Save to edition<select data-destination>${editions.map(e => `<option value="${h(e.slug)}"${chosen(e.slug,feed.slug)}>${h(e.name)}</option>`).join("")}</select></label>` : ""}
     ${field("Public article link", "url", "", 'type="url" required placeholder="https://"')}
     ${field("Original publication", "source", "", "required")}
     ${field("Headline", "title", "", "required")}
     ${area("Curator’s note", "note", "", 'rows="2"')}
-    ${area("Authorized source material for drafting (optional)", "evidence", "", 'rows="3"')}
-    <p class="field-help">Paste at least 25 words of material you own or have permission to process. It stays in the studio and goes to OpenAI only when you request a draft.</p>
-    ${act("Save to inbox")}
+    ${audience(false)}
+    <details><summary>Add material for AI drafting</summary>${area("Authorized source material", "evidence", "", 'rows="3"')}<p>Use at least 25 words you own or have permission to process.</p></details>
+    <div class="actions">${act("Save to inbox", {state:"draft"})}${act("Publish brief", {primary:true,state:"live"})}</div>
   `,
     ),
     "shared-story",
@@ -205,6 +210,7 @@ function storyEditor(feed, story) {
     ${hidden("id", story.id)}
     ${field("Edition headline", "title", story.title, "required")}
     ${area("Curator’s note", "note", story.note, 'rows="3"')}
+    ${audience(story.members_only)}
     <div class="actions">
       ${state === "live" ? act("Update live brief", { primary: true, state: "live" }) + act("Withdraw to drafts", { state: "draft" }) : state === "archived" ? act("Restore draft", { state: "draft" }) : act("Save draft", { state: "draft" }) + act("Publish brief", { primary: true, state: "live" })}
       ${state !== "archived" ? act("Archive", { state: "archived" }) : ""}
@@ -281,9 +287,10 @@ export function studioPage(
     `<div class="wrap studio">${notice}
     <header class="studio-intro"><div class="edition-strap"><span class="kicker"><span class="slug-mark" aria-hidden="true"></span>Curator studio</span>${selector}</div>
     <h1>${h(selected.name)}</h1>
-    <div class="studio-subhead"><span>${selected.visibility === "draft" ? "Private draft" : selected.visibility === "members" ? "Members-only edition" : "Public edition"}</span>${selected.visibility !== "draft" ? `<a href="/f/${encodeURIComponent(selected.slug)}">Open reader edition</a>` : ""}</div></header>
+    <div class="studio-subhead"><span>${selected.visibility === "draft" ? "Private draft" : selected.visibility === "members" ? "Members-only edition" : "Public edition"}</span><a href="/f/${encodeURIComponent(selected.slug)}">${selected.visibility === "draft" ? "Preview as curator" : "Open reader edition"}</a><a href="/guide#phone">Set up phone sharing</a></div>
+    ${selected.visibility === "draft" ? '<p>Save your first brief, then choose who can read it in <a href="#settings">Publication settings</a>.</p>' : ""}</header>
     <div class="studio-layout"><section class="inbox"><h2>Editorial inbox</h2>
-    ${sharedLink(selected)}
+    ${sharedLink(selected, editions)}
     ${stories.length ? stories.map((story) => storyEditor(selected, story)).join("") : `<p class="empty-state">Your inbox is empty. Add a feed in Sources or save a shared story to start your first brief.</p>`}
     ${pageOffset > 0 || hasMore ? `<nav class="actions pagination" aria-label="Inbox pages">${pageOffset > 0 ? `<a class="secondary" href="${path}&amp;offset=${Math.max(0, pageOffset - 25)}">Previous briefs</a>` : ""}${hasMore ? `<a class="secondary" href="${path}&amp;offset=${pageOffset + 25}">Next briefs</a>` : ""}</nav>` : ""}
     </section><aside class="studio-rail"><h2>Edition desk</h2>${sourcesPanel(selected, sources)}${draftingPanel(selected)}${settings(selected)}${membersPanel(selected, members)}${billingPanel(selected, origin)}${panel("Create another edition", newEdition())}</aside></div>

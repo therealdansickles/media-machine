@@ -83,6 +83,11 @@ export async function canRead(env, feed, user, fetcher = fetch) {
   if (user?.id === feed.owner) return true;
   if (feed.visibility === "public") return true;
   if (!user || feed.visibility !== "members") return false;
+  return hasMembership(env, feed, user, fetcher);
+}
+export async function hasMembership(env, feed, user, fetcher = fetch) {
+  if (!user) return false;
+  if (user.id === feed.owner) return true;
   const m = await first(
     env.DB,
     "SELECT * FROM members WHERE edition=? AND email=?",
