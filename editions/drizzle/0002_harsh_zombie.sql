@@ -1,0 +1,1 @@
+ALTER TABLE `stories` ADD `members_only` integer DEFAULT 0 NOT NULL;

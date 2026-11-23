@@ -1,5 +1,7 @@
 import css from "./style.css";
 import client from "./studio-client.txt";
+import sharing from "./sharing-client.txt";
+import { guide, capturePage } from "./guide.js";
 import {
   homePage,
   readerPage,
@@ -8,6 +10,8 @@ import {
   escapeHtml as esc,
 } from "./public-pages.js";
 import { studioPage } from "./studio.js";
+import { uploadMail, receiveMail } from "./mail.js";
+import { mailPage } from "./mail-page.js";
 import { create, action } from "./actions.js";
 import { example, exampleStories, ensureExample } from "./example.js";
 import {
@@ -27,7 +31,7 @@ async function sweep(env, fetcher = fetch) {
     drafting: await draftNext(env, fetcher),
   };
 }
-import { canRead, claim } from "./commerce.js";
+import { canRead, hasMembership, claim } from "./commerce.js";
 const headers = {
   "Cache-Control": "private, no-store",
   "X-Content-Type-Options": "nosniff",
@@ -80,6 +84,14 @@ export async function handle(req, env, ctx, fetcher = fetch) {
     db = env.DB,
     method = req.method;
   const studio = /^\/api\/(?:create|[a-z0-9-]+\/[a-z-]+)$/.test(path);
+  const inbound=/^\/inbound\/postmark(?:\/([a-z0-9-]+))?$/.exec(path);
+  if (inbound && method === "POST") return json(await receiveMail(env,req,inbound[1]));
+  if (studio && method === "POST" && path.endsWith("/mail-upload")) {
+    if (req.headers.get("origin")!==url.origin || req.headers.get("content-type")!=="application/octet-stream") fail("Use the private inbox to import an email.",403);
+    const user=await identity(req,env), slug=path.split("/")[2];
+    if (!user || !await first(db,"SELECT 1 FROM editions WHERE slug=? AND owner=?",slug,user.id)) fail("Edition unavailable.",403);
+    return json(await uploadMail(db,slug,req));
+  }
   if (path === "/jobs/refresh" && method === "POST")
     return json(await sweep(env, fetcher));
   if (studio && method === "POST") {
@@ -91,7 +103,7 @@ export async function handle(req, env, ctx, fetcher = fetch) {
     const user = await identity(req, env);
     if (!user) fail("Sign in to your studio.", 401);
     let d;
-    const payload = await limitedText(req, 14000);
+    const payload = await limitedText(req, path.endsWith("/mail-paste") ? 750000 : 14000);
     try {
       d = JSON.parse(payload);
     } catch {
@@ -110,12 +122,15 @@ export async function handle(req, env, ctx, fetcher = fetch) {
   if (path === "/style.css") return response(css, "text/css; charset=utf-8");
   if (path === "/studio.js")
     return response(client, "application/javascript; charset=utf-8");
+  if (path === "/sharing.js") return response(sharing, "application/javascript; charset=utf-8");
+  if (path === "/guide") return response(guide(url.origin));
+  if (path === "/capture") return response(capturePage());
   if (path === "/") return response(homePage(example, exampleStories));
   if (path === "/publishing")
     return response(
       shell(
         "Publishing and corrections",
-        `<article class="wrap message-page"><p class="kicker">Media Machine Editions</p><h1>Publishing and corrections</h1><h2>What readers see</h2><p>Each curator chooses the sources, writes or reviews editorial briefs, and links back to the original publication. A source wire lists publisher headlines. Sponsor placements are labeled.</p><h2>What the studio stores</h2><p>The studio keeps your sign-in identifier, edition settings, shared links, editorial notes and any permitted source material you enter. A members-only edition stores the email addresses used to grant access. Connecting Stripe also stores subscription references and an encrypted restricted key. Curators choose whether to send authorized material to OpenAI for drafting. A connected automatic-drafting key is encrypted.</p><h2>Rights and corrections</h2><p>Use public permalinks and respect publisher terms. Publish material you own, have licensed, or can otherwise lawfully use. If a story needs correction or removal, identify the edition and its article link. Omit private subscriber details and account credentials from public reports.</p><a class="secondary" href="https://github.com/therealdansickles/media-machine/issues/new">Report a publishing issue</a></article>`,
+        `<article class="wrap message-page"><p class="kicker">Media Machine Editions</p><h1>Publishing and corrections</h1><h2>What readers see</h2><p>Each curator chooses the sources, writes or reviews editorial briefs, and links back to the original publication. A source wire lists publisher headlines. Sponsor placements are labeled.</p><h2>What the studio stores</h2><p>The studio keeps your sign-in identifier, edition settings, shared links, editorial notes and any permitted source material you enter. A members-only edition stores the email addresses used to grant access. Connecting Stripe also stores subscription references and an encrypted restricted key. Curators choose whether to send authorized material to OpenAI for drafting. A connected automatic-drafting key is encrypted.</p><h2>Private email</h2><p>Only the curator can open the email inbox. It stores message subjects and delivered text for private reading. Images and attachments are discarded. Email text stays out of automatic drafting, public pages and RSS. You can delete a message from the inbox. A brief you wrote separately can be edited or removed in the editorial inbox.</p><h2>Rights and corrections</h2><p>Use public permalinks and respect publisher terms. Publish material you own, have licensed, or can otherwise lawfully use. If a story needs correction or removal, identify the edition and its article link. Omit private subscriber details and account credentials from public reports.</p><a class="secondary" href="https://github.com/therealdansickles/media-machine/issues/new">Report a publishing issue</a></article>`,
       ),
     );
   if (path === "/robots.txt")
@@ -137,6 +152,23 @@ export async function handle(req, env, ctx, fetcher = fetch) {
         : "/studio",
     );
   }
+  if (path === "/studio/mail") {
+    const user=await identity(req,env);
+    if (!user) return redirect(signIn(path+url.search,env));
+    const slug=url.searchParams.get("edition") || "";
+    const feed=await first(db,"SELECT slug,name,mail_base,mail_alias FROM editions WHERE slug=? AND owner=?",slug,user.id);
+    if (!feed) fail("Edition unavailable.",404);
+    const q=(url.searchParams.get("q")||"").trim().slice(0,120);
+    const value=url.searchParams.get("filter");
+    const filter=["unfiled","filed"].includes(value) ? value : "all";
+    const offset=Math.min(200,Math.max(0,Math.floor(Number(url.searchParams.get("offset"))/25)||0)*25);
+    const join=" FROM private_mail m LEFT JOIN stories s ON s.edition=m.edition AND s.id='mail-'||m.id WHERE m.edition=?";
+    const rows=await all(db,"SELECT m.id,m.subject,m.received,s.id AS filed"+join+" AND (instr(lower(m.subject),lower(?))>0 OR instr(lower(m.body),lower(?))>0) AND (?='all' OR (?='filed')=(s.id IS NOT NULL)) ORDER BY m.received DESC,m.id LIMIT 26 OFFSET ?",slug,q,q,filter,filter,offset);
+    const id=url.searchParams.get("message");
+    const selected=id ? await first(db,"SELECT m.id,m.subject,m.body,s.id AS filed"+join+" AND m.id=?",slug,id) : null;
+    if (id && !selected) fail("Email unavailable.",404);
+    return response(mailPage(env,feed,rows,selected,{q,filter,offset,origin:url.origin}));
+  }
   if (path === "/studio") {
     const user = await identity(req, env);
     if (!user) return redirect(signIn(path + url.search, env));
@@ -149,7 +181,7 @@ export async function handle(req, env, ctx, fetcher = fetch) {
     const selected = slug
       ? await first(
           db,
-          "SELECT slug,name,description,byline,visibility,sponsor_name,sponsor_url,sponsor_copy,checkout_url,payment_link,draft_limit FROM editions WHERE slug=? AND owner=?",
+          "SELECT slug,name,description,byline,visibility,sponsor_name,sponsor_url,sponsor_copy,sponsor_until,checkout_url,payment_link,draft_limit FROM editions WHERE slug=? AND owner=?",
           slug,
           user.id,
         )
@@ -159,8 +191,10 @@ export async function handle(req, env, ctx, fetcher = fetch) {
       0,
       Math.min(3000, Math.floor(Number(url.searchParams.get("offset")) || 0)),
     );
-    const [sources, rows, members] = selected
+    const filter=["draft","live","archived"].includes(url.searchParams.get("filter")) ? url.searchParams.get("filter") : "";
+    const [sources, rows, members, mailTotal, recentMail] = selected
       ? await Promise.all([
+          // The dashboard displays a count; message bodies load only in the owner's email view.
           all(
             db,
             "SELECT id,label,url,mode,auto_links,status,last_checked FROM sources WHERE edition=? ORDER BY label",
@@ -168,8 +202,8 @@ export async function handle(req, env, ctx, fetcher = fetch) {
           ),
           all(
             db,
-            "SELECT id,url,source,original_title,title,note,state,source_date,published_at,evidence,automation FROM stories WHERE edition=? ORDER BY created_at DESC,id LIMIT 26 OFFSET ?",
-            slug,
+            "SELECT id,url,source,original_title,title,note,state,members_only,source_date,published_at,evidence,automation FROM stories WHERE edition=? AND (?='' OR state=?) ORDER BY created_at DESC,id LIMIT 26 OFFSET ?",
+            slug,filter,filter,
             offset,
           ),
           all(
@@ -177,12 +211,17 @@ export async function handle(req, env, ctx, fetcher = fetch) {
             "SELECT email,expires,revoked,subscription IS NOT NULL AS subscribed FROM members WHERE edition=? ORDER BY email LIMIT 500",
             slug,
           ),
+          first(db,"SELECT count(*) AS n FROM private_mail WHERE edition=?",slug),
+          all(db,"SELECT id,subject FROM private_mail WHERE edition=? ORDER BY received DESC,id LIMIT 3",slug),
         ])
       : [[], [], []];
     return response(
       studioPage(editions, selected, sources, rows.slice(0, 25), members, {
         origin: url.origin,
         offset,
+        filter,
+        mailCount: mailTotal?.n || 0,
+        recentMail: recentMail || [],
         hasMore: rows.length > 25,
       }),
     );
@@ -197,7 +236,7 @@ export async function handle(req, env, ctx, fetcher = fetch) {
   if (feed.visibility === "draft" && feed.owner !== user?.id)
     fail("This edition is unavailable.", 404);
   if (type === "claim") {
-    if (asRSS || feed.visibility !== "members")
+    if (asRSS || feed.visibility === "draft")
       fail("This membership link is unavailable.", 404);
     if (!user) return redirect(signIn(path + url.search, env));
     await claim(
@@ -212,11 +251,15 @@ export async function handle(req, env, ctx, fetcher = fetch) {
   if (asRSS && feed.visibility !== "public")
     fail("This edition does not offer a public RSS feed.", 403);
   const allowed = await canRead(env, feed, user, fetcher);
+  const hasPaidBriefs = !asRSS && feed.visibility === "public" && !!await first(db,
+    "SELECT 1 FROM stories WHERE edition=? AND state='live' AND members_only=1 LIMIT 1", slug);
+  const readPremium = !asRSS && (feed.visibility !== "public" ? allowed :
+    hasPaidBriefs && await hasMembership(env, feed, user, fetcher));
   const items = allowed
     ? await all(
         db,
-        "SELECT title,note,url,source,published_at FROM stories WHERE edition=? AND state='live' ORDER BY published_at DESC,id LIMIT 100",
-        slug,
+        "SELECT id,title,note,url,source,published_at,members_only FROM stories WHERE edition=? AND state='live' AND (members_only=0 OR ?=1) ORDER BY published_at DESC,id LIMIT 100",
+        slug, readPremium ? 1 : 0,
       )
     : [];
   if (asRSS)
@@ -227,6 +270,7 @@ export async function handle(req, env, ctx, fetcher = fetch) {
   return response(
     readerPage(feed, items, {
       locked: !allowed,
+      offer: hasPaidBriefs && !readPremium,
       member: feed.visibility !== "public",
       loginUrl: user ? null : signIn(path, env),
     }),

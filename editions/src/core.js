@@ -81,8 +81,11 @@ export const run = (db, q, ...args) =>
     .bind(...args)
     .run();
 export async function limitedText(request, max) {
+  return new TextDecoder().decode(await limitedBytes(request, max));
+}
+export async function limitedBytes(request, max) {
   const reader = request.body?.getReader();
-  if (!reader) return "";
+  if (!reader) return new Uint8Array();
   const chunks = [];
   let size = 0;
   try {
@@ -105,7 +108,7 @@ export async function limitedText(request, max) {
     buf.set(c, offset);
     offset += c.byteLength;
   }
-  return new TextDecoder().decode(buf);
+  return buf;
 }
 export const signIn = (path, env) =>
   env.IDENTITY_MODE === "sites"

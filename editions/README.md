@@ -12,6 +12,10 @@
 
 ## Earn from an edition
 
+Open `/guide` for the iPhone share-sheet Shortcut setup, desktop bookmarklet, and membership walkthrough. Bookmark `/capture` to start with a public article URL. The captured link stays in the browser tab through sign-in. In Studio, choose your edition, review the headline and note, and publish directly or save a draft.
+
+For free and paid coverage at one address, keep the edition public and set individual briefs to **Members only**. Those entries are omitted entirely from public RSS, including for signed-in readers. Existing public briefs remain public. Feed readers may retain material published before a change in access.
+
 **Direct sponsors.** Enter the sponsor’s name, link and approved copy in Publication settings. The reader displays a clearly labeled sponsor placement. Sell the placement directly and arrange billing with the sponsor.
 
 **Manual memberships.** Add an external checkout URL and select members-only visibility. Grant the subscriber’s login email access through a chosen expiry date after confirming payment. Revoke it from the same desk. The curator handles buyer communication.
@@ -21,6 +25,14 @@
 Stripe credentials are encrypted using AES-GCM with the edition ID as authenticated data. Keep the deployment key stable and backed up in your secret manager. Changing it requires reconnecting Stripe for each edition. One-off OpenAI keys are used in memory for a single draft. Enabling automatic briefs stores an encrypted, edition-scoped key; disconnecting deletes it and clears pending automatic requests.
 
 ## Sources and rights
+
+### Receive newsletters by email
+
+Studio’s private email inbox accepts pasted text and .eml files without a mail provider. It keeps up to 200 messages per edition and 120,000 characters per message. Images, attachments and raw MIME are discarded. Curators can search the delivered text, delete messages, or write a separate draft attributed to a public source.
+
+To enable forwarding for every curator, configure a dedicated Postmark inbound stream. Set the Worker secrets `POSTMARK_INBOUND_ADDRESS` to its generated address (hash@inbound.postmarkapp.com) and `POSTMARK_WEBHOOK_SECRET` to a random password of at least 24 URL-safe characters. Set the stream’s inbound webhook to `https://editions:PASSWORD@YOUR-SITE/inbound/postmark`, substituting that password. Curators can then generate or disable private plus-addresses. No DNS change is needed for Postmark's own domain. The server authenticates the provider, matches the actual envelope recipient and deduplicates deliveries by message ID. Keep webhook JSON under 4 MB; omit raw email in provider settings. A single oversized message can be imported as text.
+
+Alternatively, a curator with a dedicated Postmark stream can choose **Connect a Postmark stream** in Studio and follow the per-edition instructions. Use a unique webhook password, never a Postmark API token. Verify by forwarding a real message containing a distinctive subject and confirming it appears only in the expected edition. An email sender address alone does not establish their identity.
 
 A subscription grants the access the publisher offers. Each curator is responsible for their rights to reuse material. Public link mode stores the publisher title, date and permalink. Licensed description mode can retain up to 3,500 characters privately for editorial review. Avoid private feed tokens and subscriber copies. No full web article is fetched on link submission. Write your own analysis and preserve attribution and each publisher's paywall. Source links are visible in the web reader and RSS.
 

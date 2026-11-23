@@ -29,7 +29,7 @@ function externalUrl(value) {
 const mark = '<span class="wordmark">MEDIA <b>/</b> MACHINE</span>';
 const editionPath = (slug) => "/f/" + encodeURIComponent(String(slug ?? ""));
 
-export function shell(title, body, { studio = false } = {}) {
+export function shell(title, body, { studio = false, rssPath = "" } = {}) {
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -37,6 +37,8 @@ export function shell(title, body, { studio = false } = {}) {
 <meta name="referrer" content="no-referrer">
 <title>${escapeHtml(title)} · Media Machine Editions</title>
 <link rel="stylesheet" href="/style.css">
+<script type="module" src="/sharing.js"></script>
+${rssPath ? `<link rel="alternate" type="application/rss+xml" href="${escapeHtml(rssPath)}" title="${escapeHtml(title)}">` : ""}
 ${studio ? '<script type="module" src="/studio.js"></script>' : ""}
 </head><body>
 <a class="skip" href="#content">Skip to content</a>
@@ -92,10 +94,10 @@ export function homePage(example, stories = []) {
       <div class="actions"><a class="primary" href="/studio">Create an edition</a>${example ? `<a class="plain-link" href="${editionPath(example.slug)}">Read a sample</a>` : ""}</div>
     </div>${example ? compactCover(example, stories) : ""}</section>
     <section class="workflow"><h2>Inside the studio</h2><div class="workflow-grid">
-      <article><h3>Follow your beat</h3><p>Bring in RSS feeds or add a story link when someone shares a piece worth saving.</p></article>
+      <article><h3>Follow your beat</h3><p>Follow RSS feeds, save newsletters in your private inbox, or add a story link from your phone.</p></article>
       <article><h3>Write the brief</h3><p>Give each pick a headline and a short note explaining why your readers should open the original.</p></article>
       <article><h3>Find your audience</h3><p>Share a public edition, feature a sponsor, or offer a members-only feed.</p></article>
-    </div></section>
+    </div><p><a class="plain-link" href="/guide">Read the curator guide</a></p></section>
   </div>`,
   );
 }
@@ -114,7 +116,7 @@ function storyCard(story, index) {
 }
 
 function sponsorBlock(feed) {
-  if (!feed.sponsor_name) return "";
+  if (!feed.sponsor_name || (feed.sponsor_until && feed.sponsor_until < new Date().toISOString().slice(0,10))) return "";
   const name = escapeHtml(feed.sponsor_name);
   const destination = externalUrl(feed.sponsor_url);
   return `<aside class="sponsor" aria-label="Paid sponsorship"><span class="kicker">Sponsor</span><div><strong>${destination ? `<a href="${destination}" rel="sponsored nofollow">${name}</a>` : name}</strong>${feed.sponsor_copy ? `<p>${escapeHtml(feed.sponsor_copy)}</p>` : ""}</div></aside>`;
@@ -123,7 +125,7 @@ function sponsorBlock(feed) {
 export function readerPage(
   feed,
   stories = [],
-  { locked = false, member = false, loginUrl = null } = {},
+  { locked = false, offer = false, member = false, loginUrl = null } = {},
 ) {
   const path = editionPath(feed.slug);
   const checkout = externalUrl(feed.checkout_url);
@@ -146,12 +148,14 @@ export function readerPage(
     feed.name,
     `<div class="wrap reader">
     <header class="edition-head"><div class="edition-strap"><span class="kicker"><span class="slug-mark" aria-hidden="true"></span>${locked || member ? "Member edition" : "Independent edition"}</span>
-    ${!locked && !member ? `<a class="rss-link" href="${path}/rss.xml">RSS feed</a>` : ""}</div>
+    <div class="actions">${feed.visibility !== "draft" ? '<button type="button" class="secondary" data-share-edition>Share edition</button><span role="status" data-share-status></span>' : ""}${!locked && !member ? `<a class="rss-link" href="${path}/rss.xml">RSS feed</a>` : ""}</div></div>
     <h1>${escapeHtml(feed.name)}</h1>
     ${feed.description ? `<p class="edition-description">${escapeHtml(feed.description)}</p>` : ""}
     ${feed.byline ? `<p class="edition-byline">Edited by ${escapeHtml(feed.byline)}</p>` : ""}</header>
-    ${sponsorBlock(feed)}${contents}
+    ${sponsorBlock(feed)}${offer ? `<aside class="access-panel"><h2>Member briefs</h2><p>Members can read additional briefs from this desk.</p><div class="actions">${checkout ? `<a class="primary" href="${checkout}" rel="nofollow">Get membership</a>` : ""}${loginUrl ? `<a class="secondary" target="_top" href="${escapeHtml(loginUrl)}">Member sign-in</a>` : ""}</div></aside>` : ""}${contents}
+    <p><a class="plain-link" href="/studio">Create your own edition</a></p>
   </div>`,
+    { rssPath: feed.visibility === "public" ? path + "/rss.xml" : "" },
   );
 }
 

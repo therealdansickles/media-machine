@@ -13,6 +13,47 @@ function nextPage(redirect) {
   return target.origin === location.origin ? target.href : null;
 }
 
+const addressButton = document.querySelector("[data-copy-address]");
+if (addressButton) {
+  addressButton.addEventListener("click", async () => {
+    const field = document.getElementById("mail-address");
+    const status = document.querySelector("[data-copy-status]");
+    try {
+      await navigator.clipboard.writeText(field.value);
+      status.textContent = "Address copied.";
+    } catch {
+      field.focus();
+      field.select();
+      status.textContent = "Address selected. Use Copy on your device.";
+    }
+  });
+}
+
+const captureKey = "editions.pending-link.v1";
+const capturing = new URLSearchParams(location.search).get("capture") === "1";
+const entry = document.querySelector("#shared-story form");
+if (entry) {
+  const fields = entry.elements;
+  function fillSource() {
+    try {
+      if (!fields.source.value) fields.source.value = new URL(fields.url.value).hostname.replace(/^www\./, "");
+    } catch {}
+  }
+  fields.url.addEventListener("change", fillSource);
+  if (capturing) {
+    try {
+      const pending = JSON.parse(sessionStorage.getItem(captureKey));
+      if (pending && Date.now() - pending.time < 30 * 60 * 1000) {
+        fields.url.value = pending.url;
+        fields.title.value = pending.title || "";
+      }
+      else sessionStorage.removeItem(captureKey);
+    } catch {}
+    fillSource();
+    entry.closest("details").open = true;
+    (fields.url.value ? fields.title : fields.url).focus();
+  }
+}
 document.addEventListener("submit", async (event) => {
   const form = event.target;
   if (!(form instanceof HTMLFormElement) || form.method !== "post") return;
@@ -25,6 +66,8 @@ document.addEventListener("submit", async (event) => {
   if (clicked?.name) data.set(clicked.name, clicked.value);
   const buttons = Array.from(form.querySelectorAll('button[type="submit"]'));
   const endpoint = new URL(form.action);
+  const destination = form.querySelector("[data-destination]")?.value;
+  if (form === entry && destination) endpoint.pathname = "/api/" + encodeURIComponent(destination) + "/story";
   if (endpoint.origin !== location.origin || !endpoint.pathname.startsWith("/api/")) {
     report(form, "The form destination is unavailable. Reload and try again.", true);
     return;
@@ -34,10 +77,13 @@ document.addEventListener("submit", async (event) => {
   for (const button of buttons) button.disabled = true;
   report(form, form.hasAttribute("data-generate") ? "Drafting your brief…" : "Saving…");
   try {
+    const upload = form.hasAttribute("data-mail-upload");
+    const file = upload ? data.get("file") : null;
+    if (upload && (!(file instanceof File) || !file.size || file.size > 2*1024*1024)) throw new Error("Select an .eml file of up to 2 MB.");
     const response = await fetch(endpoint, {
       method: "POST", credentials: "same-origin", redirect: "error",
-      headers: { "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify(Object.fromEntries(data)),
+      headers: { "content-type": upload ? "application/octet-stream" : "application/json", accept: "application/json" },
+      body: upload ? file : JSON.stringify(Object.fromEntries(data)),
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : result.message || "The request could not be completed. Please try again.");
@@ -54,12 +100,19 @@ document.addEventListener("submit", async (event) => {
       return;
     }
     const target = nextPage(result.redirect);
-    if (target) location.assign(target);
+    if (target) {
+      const next = new URL(target);
+      if (capturing && endpoint.pathname === "/api/create") next.searchParams.set("capture","1");
+      location.assign(next.href);
+    }
     else if (result.message) {
       const status = document.getElementById("studio-notice");
       try { sessionStorage.setItem("edition-studio-notice", String(result.message).slice(0, 300)); } catch {}
       if (status) status.textContent = result.message;
-      location.reload();
+      if (form === entry) {
+        try { sessionStorage.removeItem(captureKey); } catch {}
+        location.assign("/studio?edition=" + encodeURIComponent(endpoint.pathname.split("/")[2]));
+      } else location.reload();
     } else location.reload();
   } catch (error) {
     report(form, error instanceof Error ? error.message : "Could not reach the studio. Please try again.", true);

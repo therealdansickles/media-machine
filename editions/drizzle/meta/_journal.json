@@ -15,6 +15,27 @@
       "when": 1795405108051,
       "tag": "0001_sour_prima",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1795436625470,
+      "tag": "0002_harsh_zombie",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1795436779246,
+      "tag": "0003_plain_redwing",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1795438162019,
+      "tag": "0004_whole_mysterio",
+      "breakpoints": true
     }
   ]
 }

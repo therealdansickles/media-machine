@@ -19,6 +19,10 @@ export const editions = sqliteTable(
     sponsor_name: text(),
     sponsor_url: text(),
     sponsor_copy: text(),
+    sponsor_until: text(),
+    mail_alias: text(),
+    mail_base: text(),
+    mail_password_hash: text(),
     checkout_url: text(),
     payment_link: text(),
     billing_key: text(),
@@ -28,8 +32,16 @@ export const editions = sqliteTable(
     drafts_used: integer().notNull().default(0),
     created_at: integer().notNull(),
   },
-  (t) => [index("editions_owner").on(t.owner)],
+  (t) => [index("editions_owner").on(t.owner), uniqueIndex("editions_mail_alias").on(t.mail_alias)],
 );
+export const mail = sqliteTable("private_mail", {
+  id: text().primaryKey(),
+  edition: text().notNull().references(() => editions.slug),
+  digest: text().notNull(),
+  subject: text().notNull(),
+  body: text().notNull(),
+  received: integer().notNull(),
+}, t => [uniqueIndex("mail_duplicate").on(t.edition,t.digest),index("mail_received").on(t.edition,t.received)]);
 export const sources = sqliteTable(
   "sources",
   {
@@ -67,6 +79,7 @@ export const stories = sqliteTable(
     title: text().notNull(),
     note: text().notNull(),
     state: text().notNull(),
+    members_only: integer().notNull().default(0),
     source_date: text(),
     published_at: text(),
     created_at: integer().notNull(),
