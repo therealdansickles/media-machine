@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 
 import { ArticleCard } from "./article-card"
@@ -9,13 +9,9 @@ import { Header } from "./header"
 
 import { SidebarStack } from "./sidebar-stack"
 
-import { SocialPulse } from "./social-pulse"
-
-import { TickerInterrupter } from "./ticker-interrupter"
-
-import { TrendingCreators } from "./trending-creators"
-
 import { getSupabase } from "@/lib/supabase"
+
+import { fetchArticlePage, type ArticleCursor } from "@/lib/article-feed"
 
 import type { Article, MappedArticle } from "@/types/article"
 
@@ -92,13 +88,12 @@ function decodeHtmlEntities(text: string): string {
 }
 
 // Map database Article to MappedArticle for ArticleCard
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapArticleToCard(article: any): MappedArticle {
+function mapArticleToCard(article: Article): MappedArticle {
   // Use analyst_summary from article directly, fallback to headline
   const summary = article.analyst_summary || article.headline
 
   // Parse entity data
-  const entities = parseEntities(article.entities_json)
+  const entities = parseEntities(article.entities_json ?? null)
 
   // Extract entity tags for display
   const entityTags: string[] = []
@@ -133,48 +128,47 @@ export function PrestigeFeed() {
   const [articles, setArticles] = useState<MappedArticle[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(true)
+  const cursor = useRef<ArticleCursor | null>(null)
+  const request = useRef<AbortController | null>(null)
 
-  useEffect(() => {
-    async function fetchArticles() {
-      try {
-        setLoading(true)
+  const loadArticles = useCallback(async () => {
+    // Guard synchronously, including repeated clicks before React re-renders.
+    if (request.current) return
+    const controller = new AbortController()
+    request.current = controller
+    setLoading(true)
+    setError(null)
 
-        const supabase = getSupabase()
-
-        // Fetch articles with entity data, filtered by link_status = 'active'
-        const { data, error: fetchError } = await supabase
-          .from('articles')
-          .select('*, entities_json, sentiment, market_impact')
-          .eq('link_status', 'active')
-          .order('created_at', { ascending: false })
-
-        if (fetchError) {
-          console.error('Supabase fetch error:', fetchError)
-          throw new Error(fetchError.message || JSON.stringify(fetchError))
-        }
-
-        if (data) {
-          const mappedArticles = data.map((article: Article) => mapArticleToCard(article))
-          setArticles(mappedArticles)
-        }
-      } catch (err: unknown) {
-        console.error('Error fetching articles:', err)
-        let errorMessage = 'Unknown error'
-        if (err instanceof Error) {
-          errorMessage = err.message
-        } else if (typeof err === 'object' && err !== null) {
-          errorMessage = JSON.stringify(err)
-        } else if (typeof err === 'string') {
-          errorMessage = err
-        }
-        setError(errorMessage)
-      } finally {
+    try {
+      const page = await fetchArticlePage(getSupabase(), cursor.current, controller.signal)
+      if (controller.signal.aborted) return
+      const mapped = page.articles.map(mapArticleToCard)
+      setArticles(previous => {
+        const ids = new Set(previous.map(article => article.id))
+        return [...previous, ...mapped.filter(article => !ids.has(article.id))]
+      })
+      cursor.current = page.nextCursor
+      setHasMore(page.nextCursor !== null)
+    } catch (err) {
+      if (controller.signal.aborted) return
+      console.error('Error fetching articles:', err)
+      setError('Stories could not be loaded. Please try again.')
+    } finally {
+      if (request.current === controller) {
+        request.current = null
         setLoading(false)
       }
     }
-
-    fetchArticles()
   }, [])
+
+  useEffect(() => {
+    void loadArticles()
+    return () => {
+      request.current?.abort()
+      request.current = null
+    }
+  }, [loadArticles])
 
   return (
 
@@ -227,64 +221,44 @@ export function PrestigeFeed() {
           )}
 
           {/* Article Feed */}
-          <div className="flex flex-col" role="feed" aria-label="News articles feed">
+          <div className="flex flex-col" aria-label="News articles feed" aria-busy={loading}>
 
-            {loading && (
-              <div className="p-12 text-center text-foreground/60 font-mono text-sm">
+            {loading && articles.length === 0 && (
+              <div className="p-12 text-center text-gray-600 dark:text-gray-400 font-mono text-sm" role="status">
                 LOADING ARTICLES...
               </div>
             )}
 
-            {error && (
-              <div className="p-12 text-center text-red-500 font-mono text-sm">
-                ERROR: {error}
-              </div>
-            )}
-
             {!loading && !error && articles.length === 0 && (
-              <div className="p-12 text-center text-foreground/60 font-mono text-sm">
+              <div className="p-12 text-center text-gray-600 dark:text-gray-400 font-mono text-sm" role="status">
                 NO ARTICLES FOUND
               </div>
             )}
 
-            {!loading && articles.slice(1).map((article, index) => (
-
-              <React.Fragment key={article.id}>
-
-                <ArticleCard {...article} />
-
-                {/* Insert ticker after second article */}
-                {index === 1 && <TickerInterrupter />}
-
-                {/* Mobile: Insert SocialPulse after article 2 */}
-                {index === 1 && (
-                  <div className="block lg:hidden px-4 py-6">
-                    <SocialPulse />
-                  </div>
-                )}
-
-                {/* Mobile: Insert TrendingCreators after article 4 (index 4) */}
-                {index === 4 && (
-                  <div className="block lg:hidden px-4 py-6">
-                    <TrendingCreators />
-                  </div>
-                )}
-
-              </React.Fragment>
-
-            ))}
+            {articles.slice(1).map(article => <ArticleCard key={article.id} {...article} />)}
 
           </div>
 
-          {/* Load More Section */}
+          {/* Keep loaded stories visible while loading another page or retrying. */}
           <div className="border-t border-border p-8 lg:p-12 text-center">
-
-            <button className="font-mono text-sm text-foreground border border-border px-6 py-3 hover:bg-[#E6FF00] hover:text-black hover:border-[#E6FF00] transition-all uppercase tracking-wider">
-
-              Load More Stories
-
-            </button>
-
+            {error && (
+              <p role="alert" className="mb-4 font-mono text-sm text-red-700 dark:text-red-400">
+                {error}
+              </p>
+            )}
+            {(hasMore || error) && (
+              <button
+                type="button"
+                onClick={() => void loadArticles()}
+                disabled={loading}
+                className="font-mono text-sm text-foreground border border-border px-6 py-3 hover:bg-[#E6FF00] hover:text-black hover:border-[#E6FF00] transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-wait"
+              >
+                {loading ? 'Loading stories…' : error ? 'Try Again' : 'Load More Stories'}
+              </button>
+            )}
+            <p role="status" className="mt-3 font-mono text-xs text-gray-600 dark:text-gray-400">
+              {articles.length > 0 && `${articles.length} stories loaded${!hasMore ? '. You’re all caught up.' : '.'}`}
+            </p>
           </div>
 
         </div>
@@ -292,7 +266,7 @@ export function PrestigeFeed() {
         {/* Sidebar - Right Column (4 cols on desktop, hidden on mobile) */}
         <div className="hidden lg:block lg:col-span-4">
 
-          <SidebarStack />
+          <SidebarStack sources={[...new Set(articles.map(article => article.source).filter((s): s is string => Boolean(s)))]} />
 
         </div>
 

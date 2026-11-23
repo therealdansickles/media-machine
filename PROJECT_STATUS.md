@@ -1,6 +1,39 @@
-# Media Machine - Project Status & Comprehensive Roadmap
+# Media Machine project status
 
-**Last Updated:** December 14, 2024
+The repository now includes the multi-curator Editions product in [editions](editions/README.md). The original publication retains its existing Supabase article URLs. The historical roadmap below describes the earlier single-publication MVP.
+
+## Historical roadmap
+
+**Repository review:** September 14, 2026
+
+## September 2026 review and first build increment
+
+Code reviewed at `a1d995b`. The infrastructure and backend notes below are historical
+project notes, not a verification of current production or n8n health.
+
+Implemented on `codex/feed-pagination-reliability`:
+- Cursor pagination: 12 stories per page, stable timestamp/UUID ordering, and end-of-feed detection.
+- Retry for initial and subsequent fetch failures, preserving loaded stories and cancelling requests on unmount.
+- Truly lazy Supabase initialization; missing settings no longer crash module import/build.
+- Active-only article detail/metadata queries; database failures are distinct from missing stories.
+- Article retry and not-found screens, setup placeholders, reproducible test/typecheck/lint commands.
+- Restored missing lint dependencies and corrected the existing lint failures without changing the visual design.
+
+Already present in the base commit: article detail routes, sharing buttons, per-article
+metadata, and prior fixes for font loading and light-mode contrast. The original
+roadmap below has been marked accordingly where the code confirms completion.
+
+Next priorities:
+1. Replace the hardcoded context tooltip, social/creator widgets, and purported live box-office figures with real data or explicit sample labels.
+2. Add search and category/source/entity filters to the paginated feed.
+3. Export/version the n8n workflow and database migrations, verify public read policies, and inspect ingestion freshness, deduplication, and failure handling.
+4. Connect submissions and newsletter capture; add sitemap/RSS and valid icon assets.
+5. Review current dependency security updates before a production release.
+
+Production Supabase data, row-level policies, and n8n execution were not accessed
+in this review. No database migration or live deployment was performed.
+
+---
 
 ## Current State: LIVE (MVP)
 
@@ -84,7 +117,7 @@ Update in Squarespace:
 ### Phase 2: Core Pages & Navigation
 
 #### 2.1 Individual Article Pages (Priority: HIGH)
-- [ ] Create `/article/[id]/page.tsx` route
+- [x] Create `/article/[id]/page.tsx` route
 - [ ] Full article view with:
   - Hero image (full width)
   - Headline, analyst summary
@@ -94,10 +127,9 @@ Update in Squarespace:
   - Share buttons (Twitter, LinkedIn, Copy link)
 
 #### 2.2 Pagination (Priority: HIGH)
-- [ ] Implement "Load More Stories" functionality
-- [ ] Use Supabase `.range()` for offset pagination
-- [ ] OR implement cursor-based pagination for performance
-- [ ] Add loading state while fetching
+- [x] Implement "Load More Stories" functionality
+- [x] Use cursor-based pagination (timestamp plus UUID)
+- [x] Add loading state while fetching
 
 #### 2.3 Header Navigation (Priority: MEDIUM)
 - [ ] Add navigation links:
@@ -210,7 +242,7 @@ Update in Squarespace:
 - [ ] Welcome email flow
 
 #### 6.3 Share Functionality (Priority: MEDIUM)
-- [ ] Share buttons on articles
+- [x] Share buttons on articles
 - [ ] Copy link with toast notification
 - [ ] Native share on mobile
 
@@ -225,9 +257,9 @@ Update in Squarespace:
 - [ ] Lazy loading for below-fold images
 
 #### 7.2 SEO (Priority: HIGH)
-- [ ] Dynamic meta tags per article page
-- [ ] Open Graph tags for social sharing
-- [ ] Twitter card meta tags
+- [x] Dynamic meta tags per article page
+- [x] Open Graph tags for social sharing
+- [x] Twitter card meta tags
 - [ ] Structured data (JSON-LD) for articles
 
 #### 7.3 Sitemap & RSS (Priority: MEDIUM)

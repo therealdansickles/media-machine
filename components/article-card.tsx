@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { DataCardTooltip } from "./data-card-tooltip"
+
 
 interface ArticleCardProps {
   id: string
@@ -57,7 +57,7 @@ export function ArticleCard({
   // Parse author field if source/reporter not provided
   // Format: "By [Publication]" -> extract publication
   const publication = source || (author.startsWith("By ") ? author.replace("By ", "") : author)
-  const reporterName = reporter || "Staff Writer"
+  const reporterName = reporter
   
   // Check if we have a real analyst summary (not just the headline repeated)
   const hasRealSummary = summary && summary.trim() !== headline.trim()
@@ -100,11 +100,7 @@ export function ArticleCard({
               {truncatedSummary ? (
                 <>
                   {truncatedSummary}{" "}
-                  <DataCardTooltip>
-                    <span className="text-[#00F0FF] hover:underline cursor-help decoration-dotted underline-offset-2 inline">
-                      [Context]
-                    </span>
-                  </DataCardTooltip>
+
                 </>
               ) : (
                 <span className="italic text-gray-500 dark:text-gray-500">Analysis pending...</span>
@@ -139,7 +135,7 @@ export function ArticleCard({
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 mt-2">
           {/* Updated author display: SOURCE: [Publication] // Reported by [Name] */}
           <span className="font-mono text-xs uppercase tracking-widest text-gray-600 dark:text-gray-400">
-            SOURCE: {publication} <span className="text-gray-400 dark:text-gray-600">//</span> Reported by {reporterName} <span className="text-gray-400 dark:text-gray-600">//</span> {time}
+            SOURCE: {publication} <span className="text-gray-400 dark:text-gray-600">{"//"}</span> {reporterName && <>Reported by {reporterName} · </>} {time}
           </span>
 
           {/* Prominent READ ORIGINAL button - only shown if URL is valid */}

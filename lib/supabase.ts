@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 // Sanitize env vars - remove ALL whitespace and non-printable characters
 function sanitizeEnvVar(value: string | undefined): string {
@@ -17,20 +17,9 @@ export function getSupabase(): SupabaseClient {
   const supabaseAnonKey = sanitizeEnvVar(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Supabase credentials missing:', {
-      urlLength: supabaseUrl.length,
-      keyLength: supabaseAnonKey.length
-    })
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
   }
 
   _supabase = createClient(supabaseUrl, supabaseAnonKey)
   return _supabase
 }
-
-// For backwards compatibility
-export const supabase = typeof window !== 'undefined'
-  ? getSupabase()
-  : createClient(
-      sanitizeEnvVar(process.env.NEXT_PUBLIC_SUPABASE_URL),
-      sanitizeEnvVar(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-    )

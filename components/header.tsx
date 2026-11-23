@@ -8,7 +8,7 @@ export function Header() {
       <div className="text-lg font-bold uppercase tracking-tight text-foreground" style={{ fontFamily: 'var(--font-fraunces), Georgia, serif' }}>
         MEDIA / MACHINE
       </div>
-      <ThemeToggle />
+      <nav className="flex items-center gap-4" aria-label="Main navigation"><a className="font-mono text-sm underline underline-offset-4" href="/editions">Create a feed</a><ThemeToggle /></nav>
     </header>
   )
 }

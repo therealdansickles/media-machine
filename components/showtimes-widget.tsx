@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import * as Tabs from "@radix-ui/react-tabs"
 
 interface TVShow {
@@ -23,12 +23,6 @@ export function ShowtimesWidget() {
   const [tvShows, setTvShows] = useState<TVShow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (activeTab === "series") {
-      fetchPrimetimeShows()
-    }
-  }, [activeTab])
 
   async function fetchPrimetimeShows() {
     try {
@@ -76,7 +70,10 @@ export function ShowtimesWidget() {
       <div className="bg-[#C2D600] dark:bg-transparent dark:text-[#E6FF00] text-black text-xs uppercase tracking-wider mb-3 font-bold border-b border-[#050505] dark:border-border pb-2 px-2 py-1">
         SHOWTIMES & LIVE TV
       </div>
-      <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs.Root value={activeTab} onValueChange={tab => {
+        setActiveTab(tab)
+        if (tab === "series" && !loading) void fetchPrimetimeShows()
+      }} className="w-full">
         <Tabs.List className="flex gap-1 mb-3 border-b border-[#050505] dark:border-border">
           <Tabs.Trigger
             value="films"
